@@ -1,0 +1,137 @@
+#!/bin/sh
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# This initramfs script implements support for branch filesystem
+# in local rootfs environments.
+# This part is executed at the END of the "local" root mount
+# operation
+
+PREREQ=""
+prereqs()
+{
+        echo "$PREREQ"
+}
+
+# get pre-requisites
+case $1 in
+prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. ./scripts/functions
+
+[ "$quiet" != "y" ] && log_begin_msg "Parsing overlay specific parameters..."
+# Parse command line options
+for x in $(cat /proc/cmdline); do
+        case $x in
+	branch=*)
+		BRANCH=${x#branch=}
+		case $BRANCH in
+		LABEL=*)
+			BRANCH="${BRANCH#LABEL=}"
+
+			# support / in LABEL= paths (escape to \x2f)
+			case "${BRANCH}" in
+			*[/]*)
+			if [ -x "$(command -v sed)" ]; then
+				ROOT="$(echo ${BRANCH} | sed 's,/,\\x2f,g')"
+			else
+				if [ "${BRANCH}" != "${BRANCH#/}" ]; then
+					BRANCH="\x2f${BRANCH#/}"
+				fi
+				if [ "${BRANCH}" != "${BRANCH%/}" ]; then
+					BRANCH="${BRANCH%/}\x2f"
+				fi
+				IFS='/'
+				newbranch=
+				for s in $BRANCH; do
+					if [ -z "${newbranch}" ]; then
+						newbranch="${s}"
+					else
+						newbranch="${newbranch}\\x2f${s}"
+					fi
+				done
+				unset IFS
+				BRANCH="${newbranch}"
+			fi
+			esac
+			BRANCH="/dev/disk/by-label/${BRANCH}"
+			;;
+		UUID=*)
+			BRANCH="/dev/disk/by-uuid/${BRANCH#UUID=}"
+			;;
+		/dev/ram)
+			BRANCHFSTYPE="tmpfs"
+			BRANCH="tmpfs"
+			;;
+		esac
+		;;
+	branchflags=*)
+		BRANCHFLAGS="-o ${x#branchflags=}"
+		;;
+	branchfstype=*)
+		BRANCHFSTYPE="${x#branchfstype=}"
+		;;
+	branchropath=*)
+		BRANCHROPATH="${x#branchropath=}"
+		;;
+	branchrwpath=*)
+		BRANCHRWPATH="${x#branchrwpath=}"
+		;;
+	esac
+done
+[ "$quiet" != "y" ] && log_end_msg
+
+[ "$quiet" != "y" ] && log_begin_msg "Loading filesystem drivers..."
+modprobe loop
+modprobe squashfs
+modprobe aufs
+[ "$quiet" != "y" ] && log_end_msg
+
+if [ "$BRANCH" ]; then
+	# Get the branch filesystem type if not set
+	if [ -z "${BRANCHFSTYPE}" ]; then
+		[ -n "${BFSTYPE}" ] || BFSTYPE=$(/sbin/blkid -s TYPE -o value "${BRANCH}")
+		BRANCHFSTYPE="${BFSTYPE}"
+	else
+		BFSTYPE="${BRANCHFSTYPE}"
+	fi
+
+	[ "$quiet" != "y" ] && log_begin_msg "Creating filesystem prerequisites..."
+	mkdir /union
+	mkdir /union/ro
+	mkdir /union/rw
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Mounting read write branch filesystem..."
+	[ -n "${BFSTYPE}" -a "${BFSTYPE}" != "tmpfs" ] && modprobe ${BFSTYPE}
+	mount ${BFSTYPE:+-t ${BFSTYPE} }${BRANCHFLAGS} ${BRANCH} /union/rw
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Moving read only root filesystem in place..."
+	mount -o move ${rootmnt} /union/ro
+	[ "$quiet" != "y" ] && log_end_msg
+
+
+	[ "$quiet" != "y" ] && log_begin_msg "Merging filesystem..."
+	mount -t aufs -o br:/union/rw${BRANCHRWPATH}:/union/ro${BRANCHROPATH} none ${rootmnt}
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Create working shadows..."
+	mkdir -p ${rootmnt}/root/.host
+	mkdir -p ${rootmnt}/root/.union/ro
+	mkdir -p ${rootmnt}/root/.union/rw
+	mount -o move /host     ${rootmnt}/root/.host
+	mount -o move /union/ro ${rootmnt}/root/.union/ro
+	mount -o move /union/rw ${rootmnt}/root/.union/rw
+	[ "$quiet" != "y" ] && log_end_msg
+fi
+
+unset BRANCH
+unset BRANCHFLAGS
+unset BRANCHFSTYPE
+unset BRANCHROPATH
+unset BRANCHRWPATH

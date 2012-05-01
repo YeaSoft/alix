@@ -1,0 +1,23 @@
+# Used by ifup(8) and ifdown(8). See the interfaces(5) manpage or
+# /usr/share/doc/ifupdown/examples for more information.
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The internal network interface
+auto eth0
+iface eth0 inet static
+	address		192.168.1.1
+	netmask		255.255.255.0
+	# emergency fallback addresses
+	post-up		ip addr add 169.254.19.65/16 dev eth0
+	pre-down	ip addr del 169.254.19.65/16 dev eth0
+
+# The guest Network Interface
+# auto eth1
+# iface eth1 inet static
+
+# The wan network interface
+auto eth2
+iface eth2 inet dhcp 

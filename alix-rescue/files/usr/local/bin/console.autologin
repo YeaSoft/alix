@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# display /etc/issue with parsing of all escape codes
+
+H_sb="(unknown)"
+H_sd=$(date +"%a %b %d  %Y")
+H_ss=$(uname -s)
+H_sl=$(expr match "$(/usr/bin/tty)" '/dev/\(.*\)' | sed -e "s/\//\\\\\//g")
+H_sm=$(uname -m)
+H_sn=$(uname -n)
+H_so=$(hostname -y)
+# H_Co=$(expr match $(hostname -f) '[^.]*.\(.*\)')
+H_sr=$(uname -r)
+H_st=$(date +"%H:%M:%S")
+H_su="0"
+H_Cu="0 users"
+H_sv=$(uname -v)
+
+cat /etc/issue | \
+	sed -e "s/\\\b/${H_sb}/g" | \
+	sed -e "s/\\\d/${H_sd}/g" | \
+	sed -e "s/\\\s/${H_ss}/g" | \
+	sed -e "s/\\\l/${H_sl}/g" | \
+	sed -e "s/\\\m/${H_sm}/g" | \
+	sed -e "s/\\\n/${H_sn}/g" | \
+	sed -e "s/\\\o/${H_so}/g" | \
+	sed -e "s/\\\O/${H_Co}/g" | \
+	sed -e "s/\\\r/${H_sr}/g" | \
+	sed -e "s/\\\t/${H_st}/g" | \
+	sed -e "s/\\\u/${H_su}/g" | \
+	sed -e "s/\\\U/${H_Cu}/g" | \
+	sed -e "s/\\\v/${H_sv}/g"
+
+
+/bin/login -f root

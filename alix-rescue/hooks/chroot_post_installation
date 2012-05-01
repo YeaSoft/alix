@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic chroot hook:      chroot_post_installation
+# called by:            uic_create, uic_upgrade
+#
+# This hook will be called by uic_create in the chrooted installation
+# environment in $TARGET after making all software installation and
+# configuration steps. Since this hook runs in chroot, none of the
+# internal UIC variables are available.
+
+# make sure all installed services that may be autostarted are stopped
+service cron stop
+service portmap stop
+
+# make sure we do not exit with an error level
+[ 1 = 1 ]

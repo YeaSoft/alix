@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	post_customization
+# called by:	uic_create, uic_build, uic_upgrade
+#
+# This hook will be called by several commands after making any customizations
+# (file copies and deletions) to the installation environment in $TARGET
+
+
+# copy the configuration file to the destination file system but remove the array
+# definitions since they are not compatible with /bin/sh
+sed -e "s/^UIC_TARGET.*/# DELETEME/g" <  "${TARGET}/uictpl.conf" | grep -v "^# DELETEME" > "${TARGET}/chroot/etc/uictpl.conf"
+
+# add some more information
+echo "UIC_CREATION_TIMESTAMP=\"$(date +'%Y-%m-%d %H:%M %z')\"" >> "${TARGET}/chroot/etc/uictpl.conf"
+echo "UIC_CREATION_VERSION=\"${VERSION}\"" >> "${TARGET}/chroot/etc/uictpl.conf"

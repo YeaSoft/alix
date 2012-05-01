@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# This configuration applies to the yeasoft boot systtem
+
+export LOOP=${LOOP}
