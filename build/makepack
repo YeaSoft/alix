@@ -1,0 +1,25 @@
+#!/bin/bash
+
+ALIX_DIRS="alix-rescue-0604 alix-rescue-0804 alix-rescue-1004"
+
+for alixdir in $ALIX_DIRS; do
+	if [ ! -d $alixdir ]; then
+		echo "ERROR: Script must be lauched from the 'alix' directory" >&2
+		exit 5
+	fi
+done
+
+for alixdir in $ALIX_DIRS; do
+	uic pack -o . -v $alixdir
+	source $alixdir/uictpl.conf
+	if [ "$UIC_RELEASE" = "squeeze" ]; then
+		FLAV="debian"
+	else
+		FLAV="ubuntu"
+	fi
+	tar czf alix-rescue-${FLAV}-${UIC_SRCVERSION}.tar.gz \
+		-C doc readme.txt relnotes.txt \
+		-C ../$alixdir/build syslinux pxelinux.cfg \
+		-C ../output package-list.txt axrescue.vmlinuz axrescue.initrd axrescue.initrdn axrescue.squashfs
+	touch --reference $alixdir/output/axrescue.squashfs alix-rescue-${FLAV}-${UIC_SRCVERSION}.tar.gz
+done
