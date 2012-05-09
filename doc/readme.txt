@@ -3,10 +3,10 @@ Alix Rescue and PE System - Version 07
 ==============================================================================
 
      alix-rescue is a minimal standalone debian system intended as rescue,
-     fallback and preinstallation environment on PC-Engines ALIX boards with
-     serial interfaces. It is delivered in a version or direct installation
-     on local CF media and a version for PXE netboot. alix rescue is available
-     in versions based on Debian Squeeze (6.04) and Ubuntu both 8.04 and 10.04
+     fallback and preinstallation environment for PC-Engines ALIX boards with
+     serial interfaces. It is delivered in a version for direct installation
+     on local CF media and a version for PXE netboot. alix-rescue is available
+     as Debian (squeeze) or Ubuntu (hardy and lucid) based image.
 
 Motivation
 ==========
