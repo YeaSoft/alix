@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	pre_build
+# called by:	uic_build
+#
+# This hook will be called by uic_build before performing the first build
+# step of the build procedure in the installation environment in $TARGET
+#!/bin/sh
+
+
+(
+cat <<EOF
+
+Welcome to YeaSoft Alix Debian ${UIC_SRCVERSION} Rescue System!
+
+Created from Debian (${UIC_RELEASE}) on ${UIC_CREATION_TIMESTAMP} using
+ - UIC (Ubuntu Installation Creator) ${UIC_CREATION_VERSION}
+ - ${UIC_SRCNAME} ${UIC_SRCVERSION} uic template
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+
+EOF
+) > "$TARGET/chroot/etc/motd.tail"
