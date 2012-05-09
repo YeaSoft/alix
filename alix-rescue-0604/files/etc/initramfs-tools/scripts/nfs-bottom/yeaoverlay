@@ -23,6 +23,8 @@ esac
 
 . ./scripts/functions
 
+DHCPD_DEFAULT="/etc/default/isc-dhcp-server"
+
 [ "$quiet" != "y" ] && log_begin_msg "Parsing overlay specific parameters..."
 # Parse command line options
 for x in $(cat /proc/cmdline); do
@@ -191,11 +193,11 @@ fi
 sed -e "s/auto eth/# auto eth/g" < ${rootmnt}/etc/network/interfaces > /interfaces
 mv /interfaces ${rootmnt}/etc/network/interfaces
 # disable autostart of dhcp server
-echo "#" >> ${rootmnt}/etc/default/isc-dhcp-server
-echo "# AUTOMATICALLY ADDED BY NETBOOT" >> ${rootmnt}/etc/default/isc-dhcp-server
-echo "echo \"isc-dhcp-server disbled\"" >> ${rootmnt}/etc/default/isc-dhcp-server
-echo "exit 0" >> ${rootmnt}/etc/default/isc-dhcp-server
-echo "# END AUTOMATIC DISABLING" >> ${rootmnt}/etc/default/isc-dhcp-server
+echo "#" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "# AUTOMATICALLY ADDED BY NETBOOT" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "echo \"isc-dhcp-server disbled\"" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "exit 0" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "# END AUTOMATIC DISABLING" >> ${rootmnt}${DHCPD_DEFAULT}
 
 unset BRANCH
 unset BRANCHFLAGS

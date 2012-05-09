@@ -1,11 +1,12 @@
 ==============================================================================
-Alix Rescue and PE System - Version 05
+Alix Rescue and PE System - Version 07
 ==============================================================================
 
-     alix-rescue is a minimal standalone ubuntu system intended as rescue,
+     alix-rescue is a minimal standalone debian system intended as rescue,
      fallback and preinstallation environment on PC-Engines ALIX boards with
-     serial interfaces. It is based on Ubuntu 10.04 and delivered in a version
-     for direct installation on local CF media and a version for PXE netboot.
+     serial interfaces. It is delivered in a version or direct installation
+     on local CF media and a version for PXE netboot. alix rescue is available
+     in versions based on Debian Squeeze (6.04) and Ubuntu both 8.04 and 10.04
 
 Motivation
 ==========
@@ -25,7 +26,7 @@ Features
 
  * Connectivity and Usability
    + ssh
-   + dhcp3-server
+   + isc dhcp server
    + lsof
    + nano
    + rsync
@@ -177,9 +178,13 @@ console=<tty>[,<serial config>]   If the option is not specified, the kernel
                                   from the serial interface nor to send
                                   anything to the board.
 
-                                  If specified, the DHCP service well be
+                                  If specified, the primary interface used for
+dhcpdif-swap                      manual configuration and dhcp server will be
+                                  eth2 and eth0 will be dhcp configured instead
+
+                                  If specified, the DHCP service will be
 dhcpdif-enable                    enabled also for the primary interface
-                                  (eth0).
+                                  (eth0 if not swapped).
 
                                   If specified, the primary interface will be
                                   initialized with the specified IP address or

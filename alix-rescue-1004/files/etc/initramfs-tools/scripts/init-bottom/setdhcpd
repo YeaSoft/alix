@@ -21,8 +21,13 @@ esac
 
 . ./scripts/functions
 
+DHCPD_DEFAULT="/etc/default/dhcp3-server"
+DHCPD_CONF="/etc/dhcp3/dhcpd.conf"
+
+DHCPDIF=eth0
 DHCPDIFIP=
 DHCPDIFMASK=
+DHCPDIFSWAP=
 DHCPDIFENABLE=
 
 valid_dotted_quad() {
@@ -53,7 +58,7 @@ valid_dotted_quad() {
 	return $ERROR
 }
 
-log_begin_msg "Parsing DHCPD overlay specific parameters..."
+[ "$quiet" != "y" ] && log_begin_msg "Parsing DHCPD overlay specific parameters..."
 # Parse command line options
 for x in $(cat /proc/cmdline); do
         case $x in
@@ -66,39 +71,58 @@ for x in $(cat /proc/cmdline); do
 	dhcpdif-en*)
 		DHCPDIFENABLE="YES"
 		;;
+	dhcpdif-sw*)
+		DHCPDIFSWAP="YES"
+		;;
 	esac
 done
-log_end_msg
+[ "$quiet" != "y" ] && log_end_msg
 
-if [ "${DHCPDIFMASK}" != "" ]; then
-	DHCPDIFNET=
-	if valid_dotted_quad "${DHCPDIFMASK}"; then
-		[ "$quiet" != "y" ] && log_begin_msg "Setting netmask of primary DHCP interface to ${DHCPDIFMASK}..."
-		sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}/etc/network/interfaces > /tempfile
-		mv /tempfile ${rootmnt}/etc/network/interfaces
-		sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}/etc/dhcp3/dhcpd.conf > /tempfile
-		mv /tempfile ${rootmnt}/etc/dhcp3/dhcpd.conf
-		[ "$quiet" != "y" ] && log_end_msg
-	fi
-fi
-
-if [ "${DHCPDIFIP}" != "" ]; then
-	DHCPDIFNET=
-	if valid_dotted_quad "${DHCPDIFIP}"; then
-		[ "$quiet" != "y" ] && log_begin_msg "Setting ip address of primary DHCP interface to ${DHCPDIFIP}..."
-		sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
-		mv /tempfile ${rootmnt}/etc/network/interfaces
-		sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}/etc/dhcp3/dhcpd.conf > /tempfile
-		mv /tempfile ${rootmnt}/etc/dhcp3/dhcpd.conf
-		sed -e "s/192.168.1./${DHCPDIFNET}./g" < ${rootmnt}/etc/dhcp3/dhcpd.conf > /tempfile
-		mv /tempfile ${rootmnt}/etc/dhcp3/dhcpd.conf
-		[ "$quiet" != "y" ] && log_end_msg
-	fi
-fi
-
-if [ "${DHCPDIFENABLE}" != "" ]; then
-	[ "$quiet" != "y" ] && log_begin_msg "Enabling DHCP server on primary DHCP interface..."
-	sed -e "s/\"eth1\"/\"eth0 eth1\"/g" < ${rootmnt}/etc/default/dhcp3-server > /tempfile
-	mv /tempfile ${rootmnt}/etc/default/dhcp3-server
+if [ "${DHCPDIFSWAP}" != "" ]; then
+	# swap eth0 with eth2
+	[ "$quiet" != "y" ] && log_begin_msg "Swapping eth0 with eth2"
+	cat ${rootmnt}/etc/network/interfaces | sed -e "s/eth0/eth12345/g" | sed -e "s/eth2/eth0/g" | sed -e "s/eth12345/eth2/g" > /tempfile
+	mv /tempfile ${rootmnt}/etc/network/interfaces
+	DHCPDIF=eth2
 	[ "$quiet" != "y" ] && log_end_msg
+fi
+
+if [ "${DHCPDIFIP}" = "dhcp" ]; then
+	[ "$quiet" != "y" ] && log_begin_msg "Setting primary interface to dhcp..."
+	sed -e "s/iface eth0/iface eth0 inet dhcp\\n\\niface eth10/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
+	mv /tempfile ${rootmnt}/etc/network/interfaces
+else
+	if [ "${DHCPDIFMASK}" != "" ]; then
+		DHCPDIFNET=
+		if valid_dotted_quad "${DHCPDIFMASK}"; then
+			[ "$quiet" != "y" ] && log_begin_msg "Setting netmask of primary DHCP interface to ${DHCPDIFMASK}..."
+			sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}/etc/network/interfaces > /tempfile
+			mv /tempfile ${rootmnt}/etc/network/interfaces
+			sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
+			[ "$quiet" != "y" ] && log_end_msg
+		fi
+	fi
+
+	if [ "${DHCPDIFIP}" != "" ]; then
+		DHCPDIFNET=
+		if valid_dotted_quad "${DHCPDIFIP}"; then
+			[ "$quiet" != "y" ] && log_begin_msg "Setting ip address of primary DHCP interface to ${DHCPDIFIP}..."
+			sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
+			mv /tempfile ${rootmnt}/etc/network/interfaces
+			sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
+			sed -e "s/192.168.1./${DHCPDIFNET}./g" < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
+			[ "$quiet" != "y" ] && log_end_msg
+		fi
+	fi
+
+	if [ "${DHCPDIFENABLE}" != "" ]; then
+		[ "$quiet" != "y" ] && log_begin_msg "Enabling DHCP server on primary DHCP interface..."
+		sed -e "s/\"eth1\"/\"${DHCPDIF} eth1\"/g" < ${rootmnt}${DHCPD_DEFAULT} > /tempfile
+		mv /tempfile ${rootmnt}${DHCPD_DEFAULT}
+		[ "$quiet" != "y" ] && log_end_msg
+	fi
+
 fi

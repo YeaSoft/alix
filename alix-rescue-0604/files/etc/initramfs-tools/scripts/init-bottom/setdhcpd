@@ -21,6 +21,9 @@ esac
 
 . ./scripts/functions
 
+DHCPD_DEFAULT="/etc/default/isc-dhcp-server"
+DHCPD_CONF="/etc/dhcp/dhcpd.conf"
+
 DHCPDIF=eth0
 DHCPDIFIP=
 DHCPDIFMASK=
@@ -95,8 +98,8 @@ else
 			[ "$quiet" != "y" ] && log_begin_msg "Setting netmask of primary DHCP interface to ${DHCPDIFMASK}..."
 			sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}/etc/network/interfaces > /tempfile
 			mv /tempfile ${rootmnt}/etc/network/interfaces
-			sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}/etc/dhcp/dhcpd.conf > /tempfile
-			mv /tempfile ${rootmnt}/etc/dhcp/dhcpd.conf
+			sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
 			[ "$quiet" != "y" ] && log_end_msg
 		fi
 	fi
@@ -107,18 +110,18 @@ else
 			[ "$quiet" != "y" ] && log_begin_msg "Setting ip address of primary DHCP interface to ${DHCPDIFIP}..."
 			sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
 			mv /tempfile ${rootmnt}/etc/network/interfaces
-			sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}/etc/dhcp/dhcpd.conf > /tempfile
-			mv /tempfile ${rootmnt}/etc/dhcp/dhcpd.conf
-			sed -e "s/192.168.1./${DHCPDIFNET}./g" < ${rootmnt}/etc/dhcp/dhcpd.conf > /tempfile
-			mv /tempfile ${rootmnt}/etc/dhcp/dhcpd.conf
+			sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
+			sed -e "s/192.168.1./${DHCPDIFNET}./g" < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
 			[ "$quiet" != "y" ] && log_end_msg
 		fi
 	fi
 
 	if [ "${DHCPDIFENABLE}" != "" ]; then
 		[ "$quiet" != "y" ] && log_begin_msg "Enabling DHCP server on primary DHCP interface..."
-		sed -e "s/\"eth1\"/\"${DHCPDIF} eth1\"/g" < ${rootmnt}/etc/default/isc-dhcp-server > /tempfile
-		mv /tempfile ${rootmnt}/etc/default/isc-dhcp-server
+		sed -e "s/\"eth1\"/\"${DHCPDIF} eth1\"/g" < ${rootmnt}${DHCPD_DEFAULT} > /tempfile
+		mv /tempfile ${rootmnt}${DHCPD_DEFAULT}
 		[ "$quiet" != "y" ] && log_end_msg
 	fi
 

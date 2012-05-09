@@ -4,6 +4,8 @@
 #
 # This initramfs script implements support for loop and branch
 # filesystem in nfs rootfs environments.
+# This part is executed at the END of the "nfs" root mount
+# operation
 
 PREREQ=""
 prereqs()
@@ -20,6 +22,8 @@ prereqs)
 esac
 
 . ./scripts/functions
+
+DHCPD_DEFAULT="/etc/default/dhcp3-server"
 
 if [ "$loop" ]; then
 	[ "$quiet" != "y" ] && log_begin_msg "Processing loop mount..."
@@ -169,6 +173,9 @@ if [ "$BRANCH" ]; then
 	mount -o move /host     ${rootmnt}/root/.host
 	mount -o move /union/ro ${rootmnt}/root/.union/ro
 	mount -o move /union/rw ${rootmnt}/root/.union/rw
+	# register physical filesystems in fstab
+	echo >> ${rootmnt}/etc/fstab
+	grep /root/.host /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
 	[ "$quiet" != "y" ] && log_end_msg
 
 fi
@@ -176,6 +183,12 @@ fi
 # disable autostart of ethernet adaptors
 sed -e "s/auto eth/# auto eth/g" < ${rootmnt}/etc/network/interfaces > /interfaces
 mv /interfaces ${rootmnt}/etc/network/interfaces
+# disable autostart of dhcp server
+echo "#" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "# AUTOMATICALLY ADDED BY NETBOOT" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "echo \"isc-dhcp-server disbled\"" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "exit 0" >> ${rootmnt}${DHCPD_DEFAULT}
+echo "# END AUTOMATIC DISABLING" >> ${rootmnt}${DHCPD_DEFAULT}
 
 unset BRANCH
 unset BRANCHFLAGS

@@ -1,18 +1,25 @@
 ==============================================================================
-Release Notes - Alix Rescue and PE System - Version 05              2012-05-01
+Release Notes - Alix Rescue and PE System - Version 07              2012-05-09
 ==============================================================================
 
 * Release Scope
+* What's New
 * Included Software
 * Memory Impact
 * Known Problems
 
 Release Scope
 -------------
-This is the first official release of the Alix Ubuntu Rescue System.
-This release focusses on enabling alix-rescue both as a rescue system and as a
-preinstallation environment for PC-Engines Alix Systems by adding useful
-software like uic itself, the tool also used to create alix-rescue.
+This release introduces full support for Debian squeeze and Ubutnu 8.04 in
+addition to the previous version based on Ubuntu 10.04.
+
+
+What's New
+----------
+  * Feature: Debian squeeze based version
+  * Feature: commandline switch dhcpdif-swap to swap functionality between
+    eth0 and eth2
+  * Fixed: dhcpdif-ip=dhcp is now working
 
 
 Included Software
@@ -58,9 +65,11 @@ minute after completion of the boot process based on the selected alix-rescue
 
 Version                 | Local  | Net    
 ========================+========+========
-Ubuntu 8.04-x86         |  n/a   |  n/a 
+Ubuntu 8.04-x86         |  00.0M |  00.0M 
 ------------------------+--------+--------
-Ubuntu 10.04-x86        |  60,8M |  62,6M
+Ubuntu 10.04-x86        |  00.0M |  00.0M
+------------------------+--------+--------
+Debian 6.04-x86         |  00.0M |  00.0M
 ------------------------+--------+--------
 
 The following method was used:
@@ -72,5 +81,12 @@ The following method was used:
 Known Problems
 --------------
 
- * dhcpdif-ip=dhcp is not working in this version.
- * The Version based on Ubuntu 8.04 will be shipped with the next release.
+None
+
+
+Release History
+---------------
+
+Version 05 released on 2012-05-01
+
+  * First public release
