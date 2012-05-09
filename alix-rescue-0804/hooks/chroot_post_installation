@@ -11,8 +11,8 @@
 # internal UIC variables are available.
 
 # make sure all installed services that may be autostarted are stopped
-service cron stop	2> /dev/null > /dev/null
-service portmap stop	2> /dev/null > /dev/null
+/etc/init.d/cron stop		2> /dev/null > /dev/null
+/etc/init.d/portmap stop	2> /dev/null > /dev/null
 
 # make sure we do not exit with an error level
 [ 1 = 1 ]

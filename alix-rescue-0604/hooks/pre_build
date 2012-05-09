@@ -15,8 +15,8 @@ cat <<EOF
 
 Welcome to YeaSoft Alix Debian ${UIC_SRCVERSION} Rescue System!
 
-Created from Debian (${UIC_RELEASE}) on ${UIC_CREATION_TIMESTAMP} using
- - UIC (Ubuntu Installation Creator) ${UIC_CREATION_VERSION}
+Created from Debian (${UIC_RELEASE}) on $(date +'%Y-%m-%d %H:%M %z') using
+ - UIC (Ubuntu Installation Creator) ${VERSION}
  - ${UIC_SRCNAME} ${UIC_SRCVERSION} uic template
 
 The programs included with the Debian GNU/Linux system are free software;
