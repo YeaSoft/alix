@@ -6,6 +6,9 @@
 # in local rootfs environments.
 # This part is executed at the END of the "local" root mount
 # operation
+#
+# Version: 20120510
+# Compatibility: squeeze(i386,amd64)
 
 PREREQ=""
 prereqs()
@@ -23,19 +26,10 @@ esac
 
 . ./scripts/functions
 
-[ "$quiet" != "y" ] && log_begin_msg "Parsing overlay specific parameters..."
+[ "$quiet" != "y" ] && log_begin_msg "Parsing BRANCH specific parameters..."
 # Parse command line options
 for x in $(cat /proc/cmdline); do
         case $x in
-	loop=*)
-		LOOP="${x#loop=}"
-		;;
-	loopflags=*)
-		LOOPFLAGS="-o ${x#loopflags=}"
-		;;
-	loopfstype=*)
-		LOOPFSTYPE="${x#loopfstype=}"
-		;;
 	branch=*)
 		BRANCH=${x#branch=}
 		case $BRANCH in
@@ -100,7 +94,12 @@ modprobe squashfs
 modprobe aufs
 [ "$quiet" != "y" ] && log_end_msg
 
-if [ "$LOOP" ]; then
+if [ "$BOOT" = "internal" ]; then
+
+	mkdir -p /host
+	mount -o bind / /host
+
+elif [ "$LOOP" ]; then
 	[ "$quiet" != "y" ] && log_begin_msg "Processing loop mount..."
 
 	mkdir -p /host
@@ -133,10 +132,6 @@ if [ "$LOOP" ]; then
 
 	# FIXME This has no error checking
 	mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" ${rootmnt}
-
-	if [ -d ${rootmnt}/host ]; then
-		mount -o move /host ${rootmnt}/host
-	fi
 
 	[ "$quiet" != "y" ] && log_end_msg
 fi
@@ -180,9 +175,22 @@ if [ "$BRANCH" ]; then
 	# register physical filesystems in fstab
 	echo >> ${rootmnt}/etc/fstab
 	grep /root/.host /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep /root/.union/ro /proc/mounts | awk '{print $1"\t\t\t/root/.union/ro\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep /root/.union/rw /proc/mounts | awk '{print $1"\t\t\t/root/.union/rw\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]/[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
 	[ "$quiet" != "y" ] && log_end_msg
+else
+        [ "$quiet" != "y" ] && log_begin_msg "Create working shadows..."
+        mkdir -p ${rootmnt}/root/.host
+        mount -o move /host     ${rootmnt}/root/.host
+        # register physical filesystems in fstab
+        echo >> ${rootmnt}/etc/fstab
+        grep /root/.host /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]/[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+        [ "$quiet" != "y" ] && log_end_msg
 fi
 
+# do not leave garbage around
 unset BRANCH
 unset BRANCHFLAGS
 unset BRANCHFSTYPE
