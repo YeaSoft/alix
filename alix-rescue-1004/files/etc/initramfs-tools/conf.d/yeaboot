@@ -5,3 +5,5 @@
 # This configuration applies to the yeasoft boot systtem
 
 export LOOP=${LOOP}
+export LOOPFLAGS=${LOOPFLAGS}
+export LOOPFSTYPE=${LOOPFSTYPE}

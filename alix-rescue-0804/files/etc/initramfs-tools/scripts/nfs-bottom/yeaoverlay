@@ -6,6 +6,11 @@
 # filesystem in nfs rootfs environments.
 # This part is executed at the END of the "nfs" root mount
 # operation
+#
+# Version: 20120511
+# Compatibility: hardy(i386,amd64)
+
+DHCPD_DEFAULT="/etc/default/dhcp3-server"
 
 PREREQ=""
 prereqs()
@@ -22,49 +27,6 @@ prereqs)
 esac
 
 . ./scripts/functions
-
-DHCPD_DEFAULT="/etc/default/dhcp3-server"
-
-if [ "$loop" ]; then
-	[ "$quiet" != "y" ] && log_begin_msg "Processing loop mount..."
-
-	mkdir -p /host
-	mount -o move ${rootmnt} /host
-
-	while [ ! -e "/host/${loop#/}" ]; do
-		panic "ALERT!  /host/${loop#/} does not exist.  Dropping to a shell!"
-	done
-
-	# Get the loop filesystem type if not set
-	if [ -z "${loopfstype}" ]; then
-		eval $(fstype < "/host/${loop#/}")
-	else
-		FSTYPE="${loopfstype}"
-	fi
-	if [ "$FSTYPE" = "unknown" ] && [ -x /lib/udev/vol_id ]; then
-		FSTYPE=$(/lib/udev/vol_id -t "/host/${loop#/}")
-		[ -z "$FSTYPE" ] && FSTYPE="unknown"
-	fi
-
-	if [ ${readonly} = y ]; then
-		roflag=-r
-	else
-		roflag=-w
-	fi
-
-	# FIXME This has no error checking
-	modprobe -Qb loop
-	modprobe -Qb ${FSTYPE}
-
-	# FIXME This has no error checking
-	mount ${roflag} -o loop -t ${FSTYPE} ${loopflags} "/host/${loop#/}" ${rootmnt}
-
-	if [ -d ${rootmnt}/host ]; then
-		mount -o move /host ${rootmnt}/host
-	fi
-
-	[ "$quiet" != "y" ] && log_end_msg
-fi
 
 [ "$quiet" != "y" ] && log_begin_msg "Parsing overlay specific parameters..."
 # Parse command line options
@@ -128,11 +90,48 @@ for x in $(cat /proc/cmdline); do
 done
 [ "$quiet" != "y" ] && log_end_msg
 
-# [ "$quiet" != "y" ] && log_begin_msg "Loading filesystem drivers..."
-# modprobe loop
-# modprobe squashfs
-# modprobe aufs
-# [ "$quiet" != "y" ] && log_end_msg
+[ "$quiet" != "y" ] && log_begin_msg "Loading filesystem drivers..."
+modprobe loop
+modprobe squashfs
+modprobe aufs
+[ "$quiet" != "y" ] && log_end_msg
+
+if [ "$LOOP" ]; then
+	[ "$quiet" != "y" ] && log_begin_msg "Processing loop mount..."
+
+	mkdir -p /host
+	mount -o move ${rootmnt} /host
+
+	while [ ! -e "/host/${LOOP#/}" ]; do
+		panic "ALERT!  /host/${LOOP#/} does not exist.  Dropping to a shell!"
+	done
+
+	# Get the loop filesystem type if not set
+	if [ -z "${LOOPFSTYPE}" ]; then
+		eval $(fstype < "/host/${LOOP#/}")
+	else
+		FSTYPE="${LOOPFSTYPE}"
+	fi
+	if [ "$FSTYPE" = "unknown" ] && [ -x /lib/udev/vol_id ]; then
+		FSTYPE=$(/lib/udev/vol_id -t "/host/${LOOP#/}")
+		[ -z "$FSTYPE" ] && FSTYPE="unknown"
+	fi
+
+	if [ ${readonly} = y ]; then
+		roflag=-r
+	else
+		roflag=-w
+	fi
+
+	# FIXME This has no error checking
+	modprobe -Qb loop
+	modprobe -Qb ${FSTYPE}
+
+	# FIXME This has no error checking
+	mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" ${rootmnt}
+
+	[ "$quiet" != "y" ] && log_end_msg
+fi
 
 if [ "$BRANCH" ]; then
 	# Get the branch filesystem type if not set
@@ -176,6 +175,18 @@ if [ "$BRANCH" ]; then
 	# register physical filesystems in fstab
 	echo >> ${rootmnt}/etc/fstab
 	grep /root/.host /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep /root/.union/ro /proc/mounts | awk '{print $1"\t\t\t/root/.union/ro\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep /root/.union/rw /proc/mounts | awk '{print $1"\t\t\t/root/.union/rw\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]/[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\t"$4"\t"$5"\t"$
+	[ "$quiet" != "y" ] && log_end_msg
+else
+	[ "$quiet" != "y" ] && log_begin_msg "Create working shadows..."
+	mkdir -p ${rootmnt}/root/.host
+	mount -o move /host     ${rootmnt}/root/.host
+	# register physical filesystems in fstab
+	echo >> ${rootmnt}/etc/fstab
+	grep /root/.host /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]/[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\t"$4"\t"$5"\t"$
 	[ "$quiet" != "y" ] && log_end_msg
 
 fi
@@ -184,12 +195,15 @@ fi
 sed -e "s/auto eth/# auto eth/g" < ${rootmnt}/etc/network/interfaces > /interfaces
 mv /interfaces ${rootmnt}/etc/network/interfaces
 # disable autostart of dhcp server
-echo "#" >> ${rootmnt}${DHCPD_DEFAULT}
-echo "# AUTOMATICALLY ADDED BY NETBOOT" >> ${rootmnt}${DHCPD_DEFAULT}
-echo "echo \"isc-dhcp-server disbled\"" >> ${rootmnt}${DHCPD_DEFAULT}
-echo "exit 0" >> ${rootmnt}${DHCPD_DEFAULT}
-echo "# END AUTOMATIC DISABLING" >> ${rootmnt}${DHCPD_DEFAULT}
+if [ -f ${rootmnt}${DHCPD_DEFAULT} ]; then
+	echo "#" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "# AUTOMATICALLY ADDED BY NETBOOT" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "echo \"isc-dhcp-server disbled\"" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "exit 0" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "# END AUTOMATIC DISABLING" >> ${rootmnt}${DHCPD_DEFAULT}
+fi
 
+# do not leave garbage around
 unset BRANCH
 unset BRANCHFLAGS
 unset BRANCHFSTYPE
