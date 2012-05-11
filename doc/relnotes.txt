@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - Alix Rescue and PE System - Version 07              2012-05-09
+Release Notes - Alix Rescue and PE System - Version 08              2012-05-11
 ==============================================================================
 
 * Release Scope

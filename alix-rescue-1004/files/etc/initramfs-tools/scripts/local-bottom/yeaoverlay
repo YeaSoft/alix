@@ -132,10 +132,10 @@ if [ "$BRANCH" ]; then
 	mount -o move /union/rw ${rootmnt}/root/.union/rw
 	# register physical filesystems in fstab
 	echo >> ${rootmnt}/etc/fstab
-	grep /root/.host /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
-	grep /root/.union/ro /proc/mounts | awk '{print $1"\t\t\t/root/.union/ro\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
-	grep /root/.union/rw /proc/mounts | awk '{print $1"\t\t\t/root/.union/rw\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
-	grep "[[:space:]]/[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.host[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.union/ro[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.union/ro\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.union/rw[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.union/rw\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' | sed -e "s/$(echo -n "${rootmnt}/" | sed -e 's/\//\\\//g')/\//g" >> ${rootmnt}/etc/fstab
 	[ "$quiet" != "y" ] && log_end_msg
 else
 	[ "$quiet" != "y" ] && log_begin_msg "Create working shadows..."
@@ -143,8 +143,8 @@ else
 	mount -o move /host     ${rootmnt}/root/.host
 	# register physical filesystems in fstab
 	echo >> ${rootmnt}/etc/fstab
-	grep /root/.host /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
-	grep "[[:space:]]/[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.host[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\t"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' | sed -e "s/$(echo -n "${rootmnt}/" | sed -e 's/\//\\\//g')/\//g" >> ${rootmnt}/etc/fstab
 	[ "$quiet" != "y" ] && log_end_msg
 fi
 
