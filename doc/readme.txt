@@ -1,5 +1,5 @@
 ==============================================================================
-Alix Rescue and PE System - Version 07
+Alix Rescue and PE System - Version 09
 ==============================================================================
 
      alix-rescue is a minimal standalone debian system intended as rescue,
@@ -88,14 +88,11 @@ will be automatically initialized in the following way:
 
 Interface      Description
 -------------+----------------------------------------------------------------
-                The interface will be configured by default with the static IP
-                address 192.168.1.1/24. DHCP servicing (Dynamic addresses
-                starting from 192.168.1.128 to 192.168.1.254) is available for
-eth0            this interface but disabled by default. Both the address as
-                the DHCP server status can be configured via kernel command
-                line parameters (see below). If the interface is configured to
-                a static IP address (default), it will additionally get also
-                the APIPA 169.254.19.65/32.
+                The interface will be configured by default via DHCP and will
+                additionally get also the APIPA 169.254.19.65/16.
+eth0            Because of some particular configurable features, it will be
+                referred to as the "primary interface". It can be configured
+                to a static address and to offer DHCP addresses (see below).
 
                 The interface will be configured by default with the static IP
 eth1            address 192.168.2.1/24. DHCP servicing (Dynamic addresses
@@ -117,11 +114,9 @@ The following options may or must be specified on the kernel command line.
 Parameter                         Description
 --------------------------------+----------------------------------------------
                                   This option sets the password for the user
-                                  root. On the console there is no need to know
-password=<password>               this password, since the consoles go directly
-                                  into the shell. The password is useful when
-                                  logging in via SSH. The default password is
-                                  password
+password=<password>               root. It can be specified as clear text or
+password=SHADOW:<hash value>      as a '/etc/shadow'-compatible hash value if
+                                  prefixed with 'SHADOW:'
 
                                   This option sets the writable device for the
                                   filesystem writes during runtime. It can be
@@ -183,13 +178,14 @@ dhcpdif-swap                      manual configuration and dhcp server will be
                                   eth2 and eth0 will be dhcp configured instead
 
                                   If specified, the DHCP service will be
-dhcpdif-enable                    enabled also for the primary interface
-                                  (eth0 if not swapped).
+dhcpdif-enable                    enabled also for the primary interface.
+                                  This will work only if the primary interface
+                                  is configured with a static ip address.
 
                                   If specified, the primary interface will be
                                   initialized with the specified IP address or
-                                  by dhcp instead of 192.168.1.1. When
-dhcpdif-ip=<ip address>|dhcp      specified together with the enabled DHCP
+                                  192.168.1.1 if 'static' was specified. When
+dhcpdif-ip=<ip address>|static    specified together with the enabled DHCP
                                   service, the offered scope will be adapted
                                   automatically to the specified address
                                   network.

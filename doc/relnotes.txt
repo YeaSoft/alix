@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - Alix Rescue and PE System - Version 08              2012-05-11
+Release Notes - Alix Rescue and PE System - Version 09              2012-05-21
 ==============================================================================
 
 * Release Scope
@@ -10,23 +10,22 @@ Release Notes - Alix Rescue and PE System - Version 08              2012-05-11
 
 Release Scope
 -------------
-This release introduces full support for Debian squeeze and Ubutnu 8.04 in
-addition to the previous version based on Ubuntu 10.04.
+This release implements a different default network configuration scheme
+due to the first experiences using alix-rescue in real life scenarios.
 
 
 What's New
 ----------
-  * Feature: Debian squeeze based version
-  * Feature: commandline switch dhcpdif-swap to swap functionality between
-    eth0 and eth2
-  * Fixed: dhcpdif-ip=dhcp is now working
+ * The primary interface now starts in DHCP mode by default
+ * Increased security by adding the possibility to configure the root
+   password by specifying a 'shadow'-hash on the kernel command line.
 
 
 Included Software
 -----------------
 
 In addition to the minimal system (ubuntu-minimal), the following additional
-packagets are included in this version of alix-rescue:
+packages are included in this version of alix-rescue:
 
  * Connectivity and Usability
    + ssh
@@ -86,6 +85,13 @@ None
 
 Release History
 ---------------
+
+Version 07 released on 2012-05-11
+
+  * Feature: Debian squeeze based version
+  * Feature: commandline switch dhcpdif-swap to swap functionality between
+    eth0 and eth2
+  * Fixed: dhcpdif-ip=dhcp is now working
 
 Version 05 released on 2012-05-01
 

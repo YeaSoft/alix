@@ -88,9 +88,12 @@ if [ "${DHCPDIFSWAP}" != "" ]; then
 fi
 
 if [ "${DHCPDIFIP}" = "dhcp" ]; then
-	[ "$quiet" != "y" ] && log_begin_msg "Setting primary interface to dhcp..."
-	sed -e "s/iface eth0/iface eth0 inet dhcp\\n\\niface eth10/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
-	mv /tempfile ${rootmnt}/etc/network/interfaces
+	# this is default now - so do nothing
+	[ "$quiet" != "y" ] && log_begin_msg "Leaving primary interface in dhcp mode..."
+	# [ "$quiet" != "y" ] && log_begin_msg "Setting primary interface to dhcp..."
+	# sed -e "s/iface eth0/iface eth0 inet dhcp\\n\\niface eth10/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
+	# mv /tempfile ${rootmnt}/etc/network/interfaces
+	[ "$quiet" != "y" ] && log_end_msg
 else
 	if [ "${DHCPDIFMASK}" != "" ]; then
 		DHCPDIFNET=
@@ -115,7 +118,18 @@ else
 			sed -e "s/192.168.1./${DHCPDIFNET}./g" < ${rootmnt}${DHCPD_CONF} > /tempfile
 			mv /tempfile ${rootmnt}${DHCPD_CONF}
 			[ "$quiet" != "y" ] && log_end_msg
+		elif [ "${DHCPDIFIP}" != "static" ]; then
+			# invalid option specified
+			DHCPDIFIP=
 		fi
+	fi
+
+	if [ "${DHCPDIFIP}" != "" ]; then
+		# set primary interface to static mode
+		sed	-e "s/iface ${DHCPDIF} inet dhcp/iface ${DHCPDIF} inet static/" \
+			-e "s/#ADDR/address/" \
+			-e "s/#MASK/netmask/" < ${rootmnt}/etc/network/interfaces > /tempfile
+		mv /tempfile ${rootmnt}/etc/network/interfaces
 	fi
 
 	if [ "${DHCPDIFENABLE}" != "" ]; then
