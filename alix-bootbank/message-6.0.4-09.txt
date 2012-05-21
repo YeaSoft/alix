@@ -1,0 +1,17 @@
+======================================================================
+ALIX Debian 6 (squeeze) OS
+
+Bundle Version: 0.5
+(c) 2012 by YeaSoft Int'l
+
+
+Boot options:
+
+   bank1:      Starts the default system on bootbank 1 (default)
+   bank2:      Starts the default system on bootbank 2
+   bank1.old:  Starts the previous system on bootbank 1
+   bank2.old:  Starts the previous system on bootbank 2
+   rescue:     Starts a minimal non persistent system for rescue
+               operations (fallback)
+
+======================================================================

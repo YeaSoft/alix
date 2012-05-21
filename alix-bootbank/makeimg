@@ -1,0 +1,70 @@
+#!/bin/bash
+
+set -e
+
+ALIX_DIRS="alix-rescue-0604 alix-rescue-0804 alix-rescue-1004"
+
+for alixdir in $ALIX_DIRS; do
+	if [ ! -d $alixdir ]; then
+		echo "ERROR: Script must be lauched from the 'alix' directory" >&2
+		exit 5
+	fi
+	for alixext in vmlinuz initrd squashfs; do
+		if [ ! -e "${alixdir}/output/axrescue.${alixext}" ]; then
+			echo "ERROR: Some of the needed artefacts are missing." >&2
+			exit 2
+		fi
+	done
+done
+
+for alixdir in $ALIX_DIRS; do
+	source $alixdir/uictpl.conf
+	if [ "$UIC_RELEASE" = "squeeze" ]; then
+		FLAV="debian"
+	else
+		FLAV="ubuntu"
+	fi
+
+	RAWFILE=alix-bootbank-${FLAV}-${UIC_SRCVERSION}.img
+	echo "Creating disc image file $RAWFILE"
+	dd if=/dev/zero of=$RAWFILE bs=1M count=520 > /dev/null 2> /dev/null
+	echo "  Mapping $RAWFILE as /dev/loop7"
+	losetup /dev/loop7 $RAWFILE
+	echo "  Writing master boot record"
+	dd if=/usr/lib/syslinux/mbr.bin of=/dev/loop7 > /dev/null 2> /dev/null
+	echo "  Partitioning"
+	sfdisk --no-reread /dev/loop7 < alix-bootbank/bootbank.ptab
+	sleep 1
+	losetup -d /dev/loop7
+
+	PART_START=$(cat alix-bootbank/bootbank.ptab | awk 'NR == 4 {print $4$6}' | cut -d, -f 1)
+	PART_END=$(cat alix-bootbank/bootbank.ptab | awk 'NR == 4 {print $4$6}' | cut -d, -f 2)
+
+	echo "  Mapping root partition range ${PART_START}-${PART_END} to /dev/loop7"
+	losetup /dev/loop7 --offset $((512 * $PART_START)) --sizelimit $((512 * $PART_END)) $RAWFILE
+	echo "  Creating filesystem"
+	mke2fs -L bootbank /dev/loop7
+	echo "  Mounting bootbank"
+	mkdir -p tmpbb
+	mount /dev/loop7 tmpbb
+	echo "  Populating bootbank"
+	mkdir -p tmpbb/syslinux
+	mkdir -p tmpbb/bank1
+	mkdir -p tmpbb/bank2
+	extlinux --install tmpbb/syslinux
+	cp alix-bootbank/extlinux.conf                 tmpbb/syslinux
+	cp alix-bootbank/extlinux.default              tmpbb/syslinux
+	cp alix-bootbank/message-${UIC_SRCVERSION}.txt tmpbb/syslinux/message.txt
+	cp ${alixdir}/output/axrescue.vmlinuz          tmpbb
+	cp ${alixdir}/output/axrescue.initrd           tmpbb
+	cp ${alixdir}/output/axrescue.squashfs         tmpbb
+	echo "  Unmounting and compressing"
+	sleep 1
+	umount tmpbb
+	losetup -d /dev/loop7
+	touch --reference $alixdir/output/axrescue.squashfs $RAWFILE
+	bzip2 $RAWFILE
+	rmdir tmpbb
+	echo "  Done."
+
+done

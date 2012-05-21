@@ -1,0 +1,4 @@
+# partition table of /dev/sda
+unit: sectors
+
+/dev/sda1 : start=       63, size=  1060227, Id=83, bootable
