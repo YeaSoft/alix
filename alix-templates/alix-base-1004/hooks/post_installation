@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	post_installation
+# called by:	uic_create, uic_upgrade
+#
+# This hook will be called by uic_create after making all software
+# installation and configuration steps in the installation environment
+# in $TARGET
+
+
+if [ -e "${TARGET}/chroot/etc/default/bootbank-preseed" ]; then
+	rm -f "${TARGET}/chroot/etc/default/bootbank-preseed"
+fi
+
+# the installation sometimes overwrites files without asking
+# so we should reapply all customizations
+apply_customizations
