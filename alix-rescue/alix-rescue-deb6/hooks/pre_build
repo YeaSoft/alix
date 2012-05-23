@@ -13,7 +13,7 @@
 (
 cat <<EOF
 
-Welcome to YeaSoft Alix Debian ${UIC_SRCVERSION} Rescue System!
+Welcome to YeaSoft's Alix Debian ${UIC_SRCVERSION} Rescue System!
 
 Created from Debian (${UIC_RELEASE}) on $(date +'%Y-%m-%d %H:%M %z') using
  - UIC (Ubuntu Installation Creator) ${VERSION}

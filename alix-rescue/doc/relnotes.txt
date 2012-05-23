@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - Alix Rescue and PE System - Version 09              2012-05-21
+Release Notes - Alix Rescue and PE System - Version 10              2012-05-23
 ==============================================================================
 
 * Release Scope
@@ -10,15 +10,14 @@ Release Notes - Alix Rescue and PE System - Version 09              2012-05-21
 
 Release Scope
 -------------
-This release implements a different default network configuration scheme
-due to the first experiences using alix-rescue in real life scenarios.
+This release features the updated version of UIC and an improved memory
+footprint by reducing the initial ramdisk size of the local version.
 
 
 What's New
 ----------
- * The primary interface now starts in DHCP mode by default
- * Increased security by adding the possibility to configure the root
-   password by specifying a 'shadow'-hash on the kernel command line.
+ * uic upgraded to version 0.14
+ * Reduced size of initial local initial ramdisk by removing unneeded modules
 
 
 Included Software
@@ -64,11 +63,11 @@ minute after completion of the boot process based on the selected alix-rescue
 
 Version                 | Local  | Net    
 ========================+========+========
-Ubuntu 8.04-x86         |  53.9M |  46.1M 
+Ubuntu 8.04-x86         |  55.5M |  44.8M 
 ------------------------+--------+--------
-Ubuntu 10.04-x86        |  68.8M |  68.7M
+Ubuntu 10.04-x86        |  70.1M |  69.5M
 ------------------------+--------+--------
-Debian 6.04-x86         |  61.5M |  62.1M
+Debian 6.04-x86         |  60.0M |  57.5M
 ------------------------+--------+--------
 
 The following method was used:
@@ -85,6 +84,12 @@ None
 
 Release History
 ---------------
+
+Version 09 released on 2012-05-21
+
+ * The primary interface now starts in DHCP mode by default
+ * Feature: Increased security by adding the possibility to configure the root
+   password by specifying a 'shadow'-hash on the kernel command line.
 
 Version 07 released on 2012-05-11
 
