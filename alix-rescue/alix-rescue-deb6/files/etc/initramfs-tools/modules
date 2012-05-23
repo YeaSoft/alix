@@ -9,6 +9,25 @@
 # raid1
 # sd_mod
 
+# disk subsystem
+pata_amd
+pata_cs5536
+ata_generic
+libata
+scsi_mod
+sd_mod
+# usb
+ohci-hcd
+ehci-hcd
+usbcore
+# host filesystems
+ext2
+ext3
+fat
+vfat
+mbcache
+lockd
+# live booting filesystems
 loop
 squashfs
 aufs

@@ -9,5 +9,16 @@
 # raid1
 # sd_mod
 
+# needed for general alix functionality
+pata_amd
+# xfs
+# jfs
+fat
+vfat
+nls_iso8859-1
+nls_cp437
+lockd
+# needed for live booting
+loop
 squashfs
 aufs
