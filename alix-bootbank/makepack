@@ -2,15 +2,20 @@
 
 set -e
 
-ALIX_DIRS="alix-rescue-0604 alix-rescue-0804 alix-rescue-1004"
+ALIX_DIRS="alix-rescue-deb6 alix-rescue-0804 alix-rescue-1004"
+
+if ! which extlinux > /dev/null; then
+	echo "ERROR: syslinux not installed" >&2
+	exit 1
+fi
 
 for alixdir in $ALIX_DIRS; do
-	if [ ! -d $alixdir ]; then
+	if [ ! -d alix-rescue/$alixdir ]; then
 		echo "ERROR: Script must be lauched from the 'alix' directory" >&2
 		exit 5
 	fi
 	for alixext in vmlinuz initrd squashfs; do
-		if [ ! -e "${alixdir}/output/axrescue.${alixext}" ]; then
+		if [ ! -e "alix-rescue/${alixdir}/output/axrescue.${alixext}" ]; then
 			echo "ERROR: Some of the needed artefacts are missing." >&2
 			exit 2
 		fi
@@ -18,7 +23,7 @@ for alixdir in $ALIX_DIRS; do
 done
 
 for alixdir in $ALIX_DIRS; do
-	source $alixdir/uictpl.conf
+	source alix-rescue/$alixdir/uictpl.conf
 	if [ "$UIC_RELEASE" = "squeeze" ]; then
 		FLAV="debian"
 	else
@@ -52,17 +57,17 @@ for alixdir in $ALIX_DIRS; do
 	mkdir -p tmpbb/bank1
 	mkdir -p tmpbb/bank2
 	extlinux --install tmpbb/syslinux
-	cp alix-bootbank/extlinux.conf                 tmpbb/syslinux
-	cp alix-bootbank/extlinux.default              tmpbb/syslinux
-	cp alix-bootbank/message-${UIC_SRCVERSION}.txt tmpbb/syslinux/message.txt
-	cp ${alixdir}/output/axrescue.vmlinuz          tmpbb
-	cp ${alixdir}/output/axrescue.initrd           tmpbb
-	cp ${alixdir}/output/axrescue.squashfs         tmpbb
+	cp alix-bootbank/extlinux.conf                      tmpbb/syslinux
+	cp alix-bootbank/extlinux.default                   tmpbb/syslinux
+	cp alix-bootbank/message-${UIC_RELEASE}.txt         tmpbb/syslinux/message.txt
+	cp alix-rescue/${alixdir}/output/axrescue.vmlinuz   tmpbb
+	cp alix-rescue/${alixdir}/output/axrescue.initrd    tmpbb
+	cp alix-rescue/${alixdir}/output/axrescue.squashfs  tmpbb
 	echo "  Unmounting and compressing"
 	sleep 1
 	umount tmpbb
 	losetup -d /dev/loop7
-	touch --reference $alixdir/output/axrescue.squashfs $RAWFILE
+	touch --reference alix-rescue/$alixdir/output/axrescue.squashfs $RAWFILE
 	bzip2 $RAWFILE
 	rmdir tmpbb
 	echo "  Done."
