@@ -1,5 +1,5 @@
 ==============================================================================
-Alix Rescue and PE System - Version 09
+Alix Rescue and PE System - Version 11
 ==============================================================================
 
      alix-rescue is a minimal standalone debian system intended as rescue,
@@ -329,7 +329,7 @@ Copyright and Legal Stuff
 NetPoldo is a derivative work based on Debian and Ubuntu Linux created by Leo
 Moll
 
-Copyright: (C) 2012 Leo Moll <leo.moll@yeasoft.com>
+Copyright: (C) 2012-2013 Leo Moll <leo.moll@yeasoft.com>
 
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

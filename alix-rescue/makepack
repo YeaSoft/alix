@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ALIX_DIRS="alix-rescue-deb6 alix-rescue-0804 alix-rescue-1004"
+ALIX_DIRS="alix-rescue-deb7 alix-rescue-deb6 alix-rescue-0804 alix-rescue-1004"
 
 for alixdir in $ALIX_DIRS; do
 	if [ ! -d alix-rescue/$alixdir ]; then

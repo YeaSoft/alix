@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - Alix Rescue and PE System - Version 10              2012-05-23
+Release Notes - Alix Rescue and PE System - Version 11              2013-04-07
 ==============================================================================
 
 * Release Scope
@@ -10,21 +10,22 @@ Release Notes - Alix Rescue and PE System - Version 10              2012-05-23
 
 Release Scope
 -------------
-This release features the updated version of UIC and an improved memory
-footprint by reducing the initial ramdisk size of the local version.
+This release features the updated version of UIC and includes the first
+edition of alix-rescue for Debian 7 (wheezy).
 
 
 What's New
 ----------
- * uic upgraded to version 0.14
- * Reduced size of initial local initial ramdisk by removing unneeded modules
+ * Support for Debian Wheezy 7.0.0
+ * UIC updated to version 0.15
+ * Binaries updated as of 2013-04-07
 
 
 Included Software
 -----------------
 
-In addition to the minimal system (ubuntu-minimal), the following additional
-packages are included in this version of alix-rescue:
+In addition to the minimal system (ubuntu-minimal or equivalent for debian),
+the following additional packages are included in this version of alix-rescue:
 
  * Connectivity and Usability
    + ssh
@@ -63,11 +64,13 @@ minute after completion of the boot process based on the selected alix-rescue
 
 Version                 | Local  | Net    
 ========================+========+========
-Ubuntu 8.04-x86         |  55.5M |  44.8M 
+Debian 7.00-x86         |  60.0M |  57.5M
+------------------------+--------+--------
+Debian 6.07-x86         |  60.0M |  57.5M
 ------------------------+--------+--------
 Ubuntu 10.04-x86        |  70.1M |  69.5M
 ------------------------+--------+--------
-Debian 6.04-x86         |  60.0M |  57.5M
+Ubuntu 8.04-x86         |  55.5M |  44.8M 
 ------------------------+--------+--------
 
 The following method was used:
@@ -84,6 +87,11 @@ None
 
 Release History
 ---------------
+
+Version 10 released on 2012-05-23
+
+ * Support for Debian Wheezy 7.0.0
+ * UIC updated to version 0.15
 
 Version 09 released on 2012-05-21
 

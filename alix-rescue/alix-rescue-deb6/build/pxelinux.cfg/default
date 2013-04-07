@@ -4,5 +4,5 @@ CONSOLE		0
 # YOU HAVE TO ADAPT ALL PATHS AND
 # IP ADDRESSES TO YOUR ENVIRONENT
 
-DEFAULT	alix-rescue-1004/axrescue.vmlinuz
-APPEND	initrd=alix-rescue-1004/axrescue.initrdn rootdelay=2 root=/dev/nfs nfsroot=169.254.19.65:/mnt/data/tftproot ip=dhcp loop=/yeaboot/alix-rescue-1004/axrescue.squashfs branch=/dev/ram console=ttyS0,38400n8
+DEFAULT	alix-rescue-deb6/axrescue.vmlinuz
+APPEND	initrd=alix-rescue-deb6/axrescue.initrdn rootdelay=2 root=/dev/nfs nfsroot=169.254.19.65:/mnt/data/tftproot ip=dhcp loop=/yeaboot/alix-rescue-deb6/axrescue.squashfs branch=/dev/ram console=ttyS0,38400n8

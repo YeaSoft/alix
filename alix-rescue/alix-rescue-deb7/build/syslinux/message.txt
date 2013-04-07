@@ -1,0 +1,19 @@
+======================================================================
+ALIX Debian 7.0
+
+Bundle Version: 0.6
+(c) 2012-2013 by YeaSoft Int'l
+
+
+Boot options:
+
+   youros:        Starts the default operating system (default)
+   rescue:        Starts a minimal non persistent system for rescue
+                  operations (fallback)
+   rescue-dhcp:   Starts a minimal non persistent system for rescue
+                  operations with eth0 configured to dhcp
+   rescue-dhcpd:  Starts a minimal non persistent system for rescue
+                  operations with eth0 configured to 192.168.1.1 and
+                  running a DHCP server
+
+======================================================================

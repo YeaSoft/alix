@@ -1,0 +1,472 @@
+#!/bin/bash
+#
+# (c) 2008-2010 YeaSoft Int'l - Leo Moll
+#
+# This script is able to create a copy of the root
+# filesystem either as a recoverable tar.bz2 file
+# or on a new volume
+
+VERSION=0.4
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+# initialize default values
+CLONE_STOP="apache2 mysql postfix"
+
+# load configuration data
+if [ -e /etc/yst.conf ]; then
+        source /etc/yst.conf
+elif [ -e $SCRIPTPATH/yst.conf ]; then
+	source $SCRIPTPATH/yst.conf
+fi
+
+
+# Initialize runtime variables
+VERBOSE=0
+CLONE=0
+FORCE=0
+SUMMARY=0
+FORMAT=1
+SYSPREP=1
+ARCHIVE=
+SWAP=
+CLONE_RESTART=
+COMPFILE=
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvtfFS] [-a <tarfile>] [-s <swapdevice>] <target_disc> <target_partition>
+
+
+Options:
+ -v, --verbose                    increase verbosity
+ -t, --summary                    display usage and sized summary at end
+ -a, --archive=<tarfile>          reseal the system also to an archive file
+ -f, --force                      overwrite existing destination archive
+ -F, --no-format                  do not format the target partition
+ -S, --no-sysprep                 do no regenerate identity (ssh keys, persistent net rules)
+ -s, --create-swap=<swap device>  create also the swap device <swap device>
+(-h) --help                       show this help (-h works with no other options)
+
+This script clones the runnning system on a new disk so that the resulting
+disk will be absolutely virgin. The Grub menu file will be updated according
+to the new UUID of the target volume and Grub will be installed into the
+master boot sector of the destination disk. Additionally the new filesystem
+can be archived into a bzip2 compressed tar file.
+
+EOF
+}
+
+function show_name {
+	echo "$SCRIPTNAME, version $VERSION"
+}
+
+function show_verbose {
+	if [ $VERBOSE -ge $1 ]; then
+		echo "$SCRIPTNAME: ${*:2}"
+	fi
+}
+
+function show_error {
+	echo "$SCRIPTNAME error: $*" >&2
+}
+
+function test_exec {
+	case $? in
+	0);;
+	*)	case "$1" in
+		"")	show_error "last command failed with error (code $?)";;
+		*)	show_error "$1 failed with error (code $?)";;
+		esac
+		if [ -n "%2" ]; then
+			show_error "commandline: $2"
+		fi
+		exit $?;;
+	esac
+}
+
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,t,a:,f,F,S,s: --longoptions help,verbose,summary,archive:,force,no-format,no-sysprep,create-swap: -- "$@")
+case $? in
+0);;
+1) show_error "syntax or usage error (code $?)"; exit $?;;
+2) show_error "syntax or usage error (code $?) in [getopt]"; exit $?;;
+3) show_error "internal error (code $?) in [getopt]"; exit $?;;
+4) show_error "wrong getopt version istalled"; exit $?;;
+*) show_error "Unknown getopt error (code $?)"; exit $?;;
+esac
+
+# Parameter parsing
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-t|--summary)			SUMMARY=1; shift;;
+	-a|--archive)			ARCHIVE=$2; shift 2;;
+	-f|--force)			FORCE=1; shift;;
+	-F|--no-format)			FORMAT=0; shift;;
+	-S|--no-sysprep)		SYSPREP=0; shift;;
+	-s|--create-swap)		SWAP=$2; shift 2;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	PV="";    TV="";   EV="-q";;
+1)	PV="-v";  TV="";   EV="-q";;
+*)	PV="-vv"; TV="-v"; EV="-v";;
+esac
+
+if [ -z $# ]; then
+	usage
+	exit 1
+fi
+
+function mount_src
+{
+	if [ ! -d /mnt/src ]; then
+		mkdir -p /mnt/src
+		test_exec mkdir "mkdir -p /mnt/src"
+	fi
+	if [ ! -d /mnt/src/bin ]; then
+		mount -o bind / /mnt/src
+		test_exec mount "mount -o bind / /mnt/src"
+	fi
+}
+
+function umount_src
+{
+	if [ -d /mnt/src/bin ]; then
+		# dismount it
+		umount /mnt/src
+		test_exec umount "umount /mnt/src"
+	fi
+	if [ -d /mnt/src ]; then
+		rmdir /mnt/src
+		test_exec rmdir "rmdir /mnt/src"
+	fi
+	
+}
+
+function mount_dst
+{
+        if [ ! -d /mnt/dst ]; then
+                mkdir -p /mnt/dst
+                test_exec mkdir "mkdir -p /mnt/dst"
+        fi
+        if [ ! -d /mnt/dst/lost+found ]; then
+                mount -t ext3 $1 /mnt/dst
+                test_exec mount "mount -t ext3 $1 /mnt/dst"
+        fi
+}
+
+function mount_dst_pd
+{
+	mount_dst
+	if [ -d /mnt/dst/proc -a ! -e /mnt/dst/proc/version ]; then
+		mount -t proc none /mnt/dst/proc
+		test_exec mount "mount -t proc none /mnt/dst/proc"
+	fi
+	if [ -d /mnt/dst/dev -a -z "$(expr match "$(mount)" '.*\(/mnt/dst/dev\).*')" ]; then
+		mount -o bind /dev /mnt/dst/dev
+		test_exec mount "mount -o bind /dev /mnt/dst/dev"
+	fi
+}
+
+function umount_dst_pd
+{
+	if [ -n "$(expr match "$(mount)" '.*\(/mnt/dst/dev\).*')" ]; then
+		# dismount it
+		umount /mnt/dst/dev
+		test_exec umount "umount /mnt/dst/dev"
+	fi
+	if [ -e /mnt/dst/proc/version ]; then
+		# dismount it
+		umount /mnt/dst/proc
+		test_exec umount "umount /mnt/dst/proc"
+	fi
+}
+
+function umount_dst
+{
+	umount_dst_pd
+	if [ -d /mnt/dst/lost+found ]; then
+		# dismount it
+		umount /mnt/dst
+		test_exec umount "umount /mnt/dst"
+	fi
+	if [ -d /mnt/dst ]; then
+		rmdir /mnt/dst
+		test_exec rmdir "rmdir /mnt/dst"
+	fi
+	
+}
+
+function services_stop
+{
+	CLONE_RESTART=
+	for service in $CLONE_STOP; do
+		if [ -x /etc/init.d/$service ]; then
+			show_verbose 1 "Stopping service $service"
+			CLONE_RESTART="$service $CLONE_RESTART"
+			if [ $VERBOSE -gt 1 ]; then
+				/etc/init.d/$service stop
+			else
+				/etc/init.d/$service stop > /dev/null
+			fi
+		fi
+	done
+}
+
+function services_restart
+{
+	if [ -z "$CLONE_RESTART" ]; then
+		return 0
+	fi
+	show_verbose 1 "Restarting stopped services $CLONE_RESTART"
+	for service in $CLONE_RESTART; do
+		if [ $VERBOSE -gt 1 ]; then
+			/etc/init.d/$service start
+		else
+			/etc/init.d/$service start > /dev/null
+		fi
+	done
+	CLONE_RESTART=
+}
+
+function init_script
+{
+	trap cleanup_script INT QUIT TERM EXIT
+}
+
+function cleanup_script
+{
+	umount_src
+	umount_dst
+	services_restart
+	trap - INT QUIT TERM EXIT
+}
+
+
+function test_params
+{
+	if [ $# -ne 2 ]; then
+		show_error "wrong number ($#) of parameters for clone operation"
+		exit 2
+	fi
+	if [ ! -b $1 ]; then
+		show_error "device $1 does not exist or is not a block device"
+		exit 3
+	fi
+	if [ ! -b $2 ]; then
+		show_error "device $2 does not exist or is not a block device"
+		exit 4
+	fi
+	if [ "$1" == "$2" ]; then
+		show_error "boot device and root partition must be different"
+		exit 5
+	fi
+	if [ -n "$SWAP" -a ! -b "$SWAP" ]; then
+		show_error "device $SWAP does not exist or is not a block device"
+		exit 6
+	fi
+	if [ -n "$ARCHIVE" -a -e "$ARCHIVE" ]; then
+		if [ $FORCE -lt 1 ]; then
+			show_error "archive file $ARCHIVE already exists"
+			exit 7
+		fi
+		rm -f $ARCHIVE
+	fi
+}
+
+function create_swap
+{
+	if [ -n "$SWAP" ]; then
+		if [ ! -b $SWAP ]; then
+			show_error "device $SWAP does not exist or is not a block device"
+			exit 7
+		fi
+		show_verbose 1 "Creating Swap Space on $SWAP"
+		mkswap -L swap $SWAP
+		test_exec mkswap "failed to create swapspace on $SWAP"
+	fi
+}
+
+function create_target
+{
+	# format destination file system
+	if [ $FORMAT -gt 0 ]; then
+		show_verbose 1 "Creating ext3 filesystem on $1"
+		mke2fs $EV -j -L root $1
+		test_exec mke2fs "mke2fs -j -L root $1"
+	fi
+}
+
+function sysprep
+{
+	if [ $SYSPREP -gt 0 ]; then
+		show_verbose 1 "Regenerating ssh identity on destination filesystem"
+		rm -f /mnt/dst/etc/ssh/ssh_host_*
+		ssh-keygen -C root@$(uname -n) -b 2048 -N "" -t rsa -f /mnt/dst/etc/ssh/ssh_host_rsa_key
+		ssh-keygen -C root@$(uname -n) -b 1024 -N "" -t dsa -f /mnt/dst/etc/ssh/ssh_host_dsa_key
+
+		show_verbose 1 "Blanking out persistent network rules"
+		echo "# This file was automatically generated by the /lib/udev/write_net_rules" > /mnt/dst/etc/udev/rules.d/70-persistent-net.rules
+		echo "# program, probably run by the persistent-net-generator.rules rules file." >> /mnt/dst/etc/udev/rules.d/70-persistent-net.rules
+		echo "#" >> /mnt/dst/etc/udev/rules.d/70-persistent-net.rules
+		echo "# You can modify it, as long as you keep each rule on a single line." >> /mnt/dst/etc/udev/rules.d/70-persistent-net.rules
+	fi
+}
+
+function patch_grub_menu
+{
+	show_verbose 1 "Patching grub menu on destination filesystem"
+	THIS_UUID=$(expr match "$(grep kopt=root=UUID= /boot/grub/menu.lst)" '.*UUID=\([0-9,a-f,-]*\).*')
+	if [ -z $THIS_UUID ]; then
+		show_error "Failed to detect the original boot volume UUID"
+		exit 8
+	fi
+	ROOT_UUID=$(expr match "$(blkid | grep $1)" '.*UUID=\"\([0-9,a-f,-]*\).*')
+	if [ -z $ROOT_UUID ]; then
+		show_error "Failed to detect target volume UUID"
+		exit 8
+	fi
+	show_verbose 1 "Original UUID for boot volume is $THIS_UUID"
+	show_verbose 1 "Target UUID for $1 is $ROOT_UUID"
+	show_verbose 1 "Patching /mnt/dst/boot/grub/menu.lst"
+	rm -f /mnt/dst/boot/grub/menu.lst*
+	sed "s/$THIS_UUID/$ROOT_UUID/g" < /boot/grub/menu.lst > /mnt/dst/boot/grub/menu.lst
+}
+
+function install_grub
+{
+	# create grub installation script
+	show_verbose 1 "Creating grub installation script for target volume"
+	echo "device (hd0) $1" > /tmp/install.grub
+	echo "root (hd0,0)" >> /tmp/install.grub
+	echo "setup (hd0)" >> /tmp/install.grub
+	echo "quit" >> /tmp/install.grub
+
+	# chroot into the filesystem
+	show_verbose 1 "Installing grub into the target volume"
+	chroot /mnt/dst /usr/sbin/grub --batch < /tmp/install.grub > /tmp/output.grub
+	test_exec grub "grub --batch failed. See /tmp/install.grub and /tmp/output.grub for more info"
+	rm -f /tmp/*.grub
+}
+
+function make_archive
+{
+	if [ -n "$ARCHIVE" ]; then
+		# create the new archive
+		show_verbose 1 "Creating archive $ARCHIVE"
+		tar $TV -cjpf $ARCHIVE --exclude var/spool/postfix/public --exclude var/spool/postfix/private --directory /mnt/dst .
+		test_exec tar "tar -cjpf $ARCHIVE"
+	fi
+}
+
+function init_summary
+{
+	# get original filesystem size
+	COMPFILE=$(mktemp)
+	df -hTP /mnt/src | grep '[/dev,Filesystem]' > $COMPFILE
+}
+
+function finish_summary
+{
+	if [ ! -z "$COMPFILE" ]; then
+		# add final filesystem size
+		df -hTP /mnt/dst | grep '/dev' >> $COMPFILE
+	fi
+}
+
+function show_summary
+{
+	if [ $SUMMARY -gt 0 ]; then
+		echo
+		echo "Size comparison of filesystems:"
+		echo "==============================="
+		echo
+		cat $COMPFILE
+		echo
+
+		if [ -n "$ARCHIVE" ]; then
+			echo Delivery Archive:
+			du -h $ARCHIVE
+		fi
+	fi
+	if [ ! -z "$COMPFILE" ]; then
+		rm -f $COMPFILE
+		COMPFILE=
+	fi
+}
+
+# first of all test parameters
+test_params $*
+
+# initialize the signal traps
+init_script
+
+# mount the source volume
+show_verbose 1 "Remounting root file system"
+mount_src
+
+# initialize the filesystem statistics
+init_summary
+
+# first of all 
+services_stop
+
+# ... and cleanup the machine
+$SCRIPTPATH/machine_cleanup $PV -Alp
+
+# create swap space
+create_swap
+
+# create taarget file system
+create_target $2
+
+# mount destination file system
+show_verbose 1 "Mounting destination filesystem on $2"
+mount_dst $2
+
+# transferring data to new root filesystem
+show_verbose 1 "Copying data to new root filesystem"
+cp -a /mnt/src/. /mnt/dst
+test_exec cp "cp -a /mnt/src/. /mnt/dst"
+rmdir /mnt/dst/mnt/src
+rmdir /mnt/dst/mnt/dst
+
+# regenerating identity
+sysprep
+
+# mount proc and dev into the destination filesystem
+show_verbose 1 "Mounting /dev and /proc into the destination filesystem"
+mount_dst_pd
+
+# patching grub menu
+patch_grub_menu $2
+
+# install grub
+install_grub $1
+
+# unmount proc and dev
+show_verbose 1 "Unmounting /dev and /proc from the destination filesystem"
+umount_dst_pd
+
+# prepare archive of resealed system
+make_archive
+
+# show success message
+show_verbose 1 "Finished. Your cloned volume is now ready for delivery"
+
+# finalize the filesystem statistics
+finish_summary
+
+# unmount volumes and clean up
+cleanup_script
+
+# show the filesystem statistics
+show_summary
+

@@ -1,8 +1,8 @@
 ======================================================================
-ALIX Ubuntu 10.04.04 LTS OS
+ALIX Debian 6.0
 
-Bundle Version: 0.5
-(c) 2012 by YeaSoft Int'l
+Bundle Version: 0.6
+(c) 2012-2013 by YeaSoft Int'l
 
 
 Boot options:

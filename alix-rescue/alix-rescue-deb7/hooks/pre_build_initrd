@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# (c) 2012-2013 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	pre_build_initrd
+# called by:	uic_build
+#
+# This hook will be called by uic_build before performing an initial ramdisk
+# build procedure in the installation environment in $TARGET
+
+# fix the ugly bug with absolute initrd.img link on ubuntu precise and debian wheezy
+LINKPATH=$(readlink "${TARGET}/chroot/initrd.img")
+if [ "${LINKPATH:0:1}" = "/" ]; then
+	show_verbose 1 "Fixing wrong absolute symbolic link to initrd.img"
+	# oh yea! It's a f...... absolute link....
+	rm "${TARGET}/chroot/initrd.img"
+	ln -s "${LINKPATH:1}" "${TARGET}/chroot/initrd.img"
+fi
