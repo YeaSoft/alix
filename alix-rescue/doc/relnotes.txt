@@ -64,13 +64,13 @@ minute after completion of the boot process based on the selected alix-rescue
 
 Version                 | Local  | Net    
 ========================+========+========
-Debian 7.00-x86         |  60.0M |  57.5M
+Debian 7.00-x86         |  69.5M |  59.9M
 ------------------------+--------+--------
-Debian 6.07-x86         |  60.0M |  57.5M
+Debian 6.07-x86         |  54.0M |  52.5M
 ------------------------+--------+--------
-Ubuntu 10.04-x86        |  70.1M |  69.5M
+Ubuntu 10.04-x86        |  65.6M |  62.6M
 ------------------------+--------+--------
-Ubuntu 8.04-x86         |  55.5M |  44.8M 
+Ubuntu 8.04-x86         |  57.2M |  46.7M 
 ------------------------+--------+--------
 
 The following method was used:

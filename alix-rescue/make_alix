@@ -1,29 +1,29 @@
 #!/bin/bash
 
-ALIX_DIRS="alix-rescue-deb7 alix-rescue-deb6 alix-rescue-0804 alix-rescue-1004"
+ALIX_DIRS="alix-rescue-deb7 alix-rescue-deb6 alix-rescue-1004 alix-rescue-0804"
 
 for alixdir in $ALIX_DIRS; do
 	if [ ! -d alix-rescue/$alixdir ]; then
-		echo "ERROR: Script must be lauched from the 'alix/alix-rescue' directory" >&2
+		echo "ERROR: Script must be lauched from the 'alix' directory" >&2
 		exit 5
 	fi
 done
 
 function alix_clean {
 	for alixdir in $ALIX_DIRS; do
-		uic clean ${alixdir}
+		uic clean -v alix-rescue/${alixdir}
 	done
 }
 
 function alix_create {
 	for alixdir in $ALIX_DIRS; do
-		uic create ${alixdir}
+		uic create -v alix-rescue/${alixdir}
 	done
 }
 
 function alix_build {
 	for alixdir in $ALIX_DIRS; do
-		uic build ${alixdir}
+		uic build -v alix-rescue/${alixdir}
 	done
 }
 
@@ -32,8 +32,7 @@ function alix_pack {
 		uic pack -o . -v alix-rescue/$alixdir
 		source alix-rescue/$alixdir/uictpl.conf
 		case "$UIC_RELEASE" in
-		"squeeze")
-		"wheezy")
+		"squeeze"|"wheezy")
 			FLAV="debian"
 			;;
 		*)
@@ -51,7 +50,7 @@ function alix_pack {
 
 function alix_upload {
 	for alixdir in $ALIX_DIRS; do
-		rsync -avc ${alixdir}/output/* 10.65.6.1:/mnt/data/tftproot/yeaboot/${alixdir}/
+		rsync -avc alix-rescue/${alixdir}/output/* 10.65.6.1:/mnt/data/tftproot/yeaboot/${alixdir}/
 	done
 }
 
