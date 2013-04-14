@@ -152,6 +152,7 @@ all)
 	alix_create
 	alix_build
 	alix_pack
+	alix_bootbank
 	;;
 *)
 	echo "Usage: make_alix {clean|pack|create|build|bootbank|upload|all}"
