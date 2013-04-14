@@ -1,0 +1,232 @@
+#!/bin/bash
+#
+# (c) 2008-2010 YeaSoft Int'l - Leo Moll
+#
+# This script creates a new identity for a machine
+
+VERSION=0.3
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+#####################################
+# variables section
+
+# initialize configuration variables
+
+# load configuration data
+if [ -e /etc/yst.conf ]; then
+	source /etc/yst.conf
+elif [ -e $SCRIPTPATH/yst.conf ]; then
+	source $SCRIPTPATH/yst.conf
+fi
+
+# initialize runtime variables
+VERBOSE=0
+DOSSHKEY=0
+DOMYSQL=0
+DOHALT=0
+DOREBOOT=0
+DOCLEAR=0
+SUCCESS=0
+MYSQLPWD=
+HOST=$(hostname)
+DOMAIN=$(hostname -d)
+FQDN=$(hostname -f)
+NEWHOST=$HOST
+NEWDOMAIN=$DOMAIN
+NEWFQDN=$HOST.$DOMAIN
+
+#####################################
+# basic script functions
+
+function show_usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvsm] [ -n hostname ] [ -d domainname ] [ -p mysql_password ]
+
+Options:
+ -v, --verbose                    increase verbosity
+ -s, --new-ssh-key                generates a new SSH key for the machine
+ -n, --new-hostname               changes the hostname of the machine
+ -d, --new-domain                 changes the DNS domain of the machine
+ -c, --clear-persistent           cleans up persistent device assignments
+ -m, --patch-mysql                patches all references to hostname in mysql user database
+ -p, --mysql-password=pwd         provide a mysql root password
+ -H, --halt                       shutdown system after succesful changes
+ -R, --reboot                     reboot system after succesful changes
+(-h) --help                       show this help (-h works with no other options)
+
+This script creates a new identity for a machine
+
+EOF
+}
+
+function show_name {
+	echo "$SCRIPTNAME, version $VERSION"
+}
+
+function show_verbose {
+	if [ $VERBOSE -ge $1 ]; then
+		echo "$SCRIPTNAME: ${*:2}"
+	fi
+}
+
+function show_error {
+	echo "$SCRIPTNAME error: $*" >&2
+}
+
+function test_exec {
+	case $? in
+	0);;
+	*)	case "$1" in
+		"")	show_error "last command failed with error (code $?)";;
+		*)	show_error "$1 failed with error (code $?)";;
+		esac
+		if [ -n "%2" ]; then
+			show_error "commandline: $2"
+		fi
+		exit $?;;
+	esac
+}
+
+#####################################
+# script initialisation
+if [ $# -eq 0 ]; then
+	show_usage
+	exit 1
+fi
+
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,s,c,n:,d:,m,p:,H,R --longoptions help,verbose,new-ssh-key,new-hostname:,new-domain:,patch-mysql,mysql-password:,clear-persistent,halt,reboot -- "$@")
+case $? in
+0);;
+1) show_error "syntax or usage error (code $?)"; exit $?;;
+2) show_error "syntax or usage error (code $?) in [getopt]"; exit $?;;
+3) show_error "internal error (code $?) in [getopt]"; exit $?;;
+4) show_error "wrong getopt version istalled"; exit $?;;
+*) show_error "Unknown getopt error (code $?)"; exit $?;;
+esac
+
+# Parameter parsing
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; show_usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-s|--new-ssh-key)		DOSSHKEY=1; shift;;
+	-n|--new-hostname)		NEWHOST=$2; shift 2;;
+	-d|--new-domain)		NEWDOMAIN=$2; shift 2;;
+	-c|--clear-persistent)		DOCLEAR=1; shift;;
+	-m|--patch-mysql)		DOMYSQL=1; shift;;
+	-p|--mysql-password)		MYSQLPWD=$2; shift 2;;
+	-H|--halt)			DOHALT=1; shift;;
+	-R|--reboot)			DOREBOOT=1; shift;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	SHG_VERBOSITY="-q";;
+*)	SHG_VERBOSITY="";;
+esac
+
+if [ $(($DOREBOOT + $DOHALT)) -ge 2 ]; then
+	show_error ambiguos options specified \(--halt and --reboot\)
+	exit 1
+fi
+
+
+# build new FQDN
+NEWFQDN=$NEWHOST.$NEWDOMAIN
+
+
+#####################################
+# script functions
+
+function clear_persist {
+	if [ $DOCLEAR -gt 0 ]; then
+		show_verbose 1 "Cleaning up persistent device assignments"
+		rm -f /etc/udev/rules.d/70-persistent-cd.rules
+		rm -f /etc/udev/rules.d/70-persistent-net.rules
+		SUCCESS=1
+	fi
+}
+
+function ssh_keygen {
+	if [ $DOSSHKEY -gt 0 ]; then
+		show_verbose 1 "Creating new ssh identity"
+		rm -f /etc/ssh/ssh_host_*
+		ssh-keygen $SHG_VERBOSITY -C root@$NEWFQDN -b 2048 -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key || test_exec ssh-keygen Failed to generate new RSA keys
+		ssh-keygen $SHG_VERBOSITY -C root@$NEWFQDN -b 1024 -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key || test_exec ssh-keygen Failed to generate new DSA keys
+		/etc/init.d/ssh restart > /dev/null
+		SUCCESS=1
+	elif [ "$HOST" != "$NEWHOST" ]; then
+		show_verbose 1 Patching the SSH keys to resemble the new hostname
+		sed -e "s/$HOST/$NEWHOST/g" < /etc/ssh/ssh_host_dsa_key.pub > /etc/ssh/ssh_host_dsa_key.pub.new
+		sed -e "s/$HOST/$NEWHOST/g" < /etc/ssh/ssh_host_rsa_key.pub > /etc/ssh/ssh_host_rsa_key.pub.new
+		mv -f /etc/ssh/ssh_host_dsa_key.pub.new /etc/ssh/ssh_host_dsa_key.pub
+		mv -f /etc/ssh/ssh_host_rsa_key.pub.new /etc/ssh/ssh_host_rsa_key.pub
+		SUCCESS=1
+	fi
+}
+
+function new_hostfiles {
+
+	if [ "$FQDN" == "$NEWFQDN" ]; then
+		show_verbose 1 new hostname is the same as the original hostname. host files will not be modified
+		return 0
+	fi
+	show_verbose 1 setting hostname to $NEWFQDN
+	echo $NEWHOST > /etc/hostname
+	sed -e "s/$FQDN/$NEWFQDN/g" -e "s/$HOST\./$NEWHOST\./g" -e "s/$HOST$/$NEWHOST/" < /etc/hosts > /etc/hosts.new
+	mv -f /etc/hosts.new /etc/hosts
+	hostname $NEWHOST
+	SUCCESS=1
+}
+
+function patch_mysql {
+	if [ $DOMYSQL -lt 1 ]; then
+		return 0;
+	fi
+	MYSQL=$(which mysql)
+	if [ ! -x $MYSQL ]; then
+		show_verbose 1 no mysql installed. skipping mysql user database patch
+		return 0
+	fi
+	if [ "$FQDN" == "$NEWFQDN" ]; then
+		show_verbose 1 new hostname is the same as the original hostname. mysql user database will not be modified
+		return 0
+	fi
+	show_verbose 1 patching new hostname in the mysql user database
+	$MYSQL -u root -p"$MYSQLPWD" mysql -e "UPDATE \`user\` SET \`host\`='$NEWFQDN' WHERE \`host\`='$FQDN'; UPDATE \`user\` SET \`host\`='$NEWHOST' WHERE \`host\`='$HOST'"
+	test_exec mysql
+	SUCCESS=1
+
+}
+
+function handle_finalisation {
+	if [ $SUCCESS -gt 0 ]; then
+		if [ $DOHALT -gt 0 ]; then
+			show_verbose 1 shutting down system
+			sleep 1
+			halt
+			return 0
+		fi
+		if [ $DOREBOOT -gt 0 ]; then
+			show_verbose 1 reboot system
+			sleep 1
+			reboot
+			return 0
+		fi
+	fi
+}
+
+
+#####################################
+# script main routine
+
+clear_persist
+ssh_keygen
+new_hostfiles
+patch_mysql
+handle_finalisation

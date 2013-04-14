@@ -1,0 +1,19 @@
+#!/bin/bash
+pushd /usr/src
+wget -c http://de.archive.ubuntu.com/ubuntu/pool/universe/l/leds-alix/leds-alix-source_0.0.1-1.1_all.deb
+apt-get -y install build-essential
+apt-get -y install debhelper module-assistant
+apt-get -y install linux-headers-$(uname -r)
+dpkg -i leds-alix-source_0.0.1-1.1_all.deb
+tar -xvjf leds-alix.tar.bz2
+cd modules/leds-alix/
+make
+make install
+cd /usr/src
+rm -rf /usr/src/modules
+dpkg --purge leds-alix-source
+apt-get --yes --purge remove debhelper module-assistant
+apt-get --yes --purge remove linux-headers-$(uname -r)
+apt-get --yes --purge remove build-essential
+apt-get --yes --purge autoremove
+popd
