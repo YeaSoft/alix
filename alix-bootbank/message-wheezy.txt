@@ -1,5 +1,5 @@
 ======================================================================
-ALIX Ubuntu 10.04.04 LTS BootBank
+ALIX Debian 7 (wheezy) BootBank
 
 Bundle Version: 0.7
 (c) 2012-2013 by YeaSoft Int'l

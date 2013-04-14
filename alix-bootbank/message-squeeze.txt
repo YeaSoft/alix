@@ -1,8 +1,8 @@
 ======================================================================
-ALIX Debian 6 (squeeze) OS
+ALIX Debian 6 (squeeze) BootBank
 
-Bundle Version: 0.5
-(c) 2012 by YeaSoft Int'l
+Bundle Version: 0.7
+(c) 2012-2013 by YeaSoft Int'l
 
 
 Boot options:

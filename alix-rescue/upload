@@ -1,7 +1,0 @@
-#!/bin/bash
-
-ALIX_DIRS="alix-rescue-deb7 alix-rescue-deb6 alix-rescue-0804 alix-rescue-1004"
-
-for alixdir in $ALIX_DIRS; do
-	rsync -avc ${alixdir}/output/* 10.65.6.1:/mnt/data/tftproot/yeaboot/${alixdir}/
-done

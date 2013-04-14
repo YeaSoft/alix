@@ -1,0 +1,162 @@
+#!/bin/bash
+
+ALIX_DIRS="alix-rescue-deb7 alix-rescue-deb6 alix-rescue-1004 alix-rescue-0804"
+
+for alixdir in $ALIX_DIRS; do
+	if [ ! -d alix-rescue/$alixdir ]; then
+		echo "ERROR: Script must be lauched from the 'alix' directory" >&2
+		exit 5
+	fi
+done
+
+if ! which extlinux > /dev/null; then
+	echo "ERROR: syslinux not installed" >&2
+	exit 1
+fi
+
+function test_alix {
+	for alixdir in $ALIX_DIRS; do
+		for alixext in vmlinuz initrd squashfs; do
+			if [ ! -e "alix-rescue/${alixdir}/output/axrescue.${alixext}" ]; then
+				echo "ERROR: Some of the needed artefacts are missing." >&2
+				exit 2
+			fi
+		done
+	done
+}
+
+function alix_clean {
+	for alixdir in $ALIX_DIRS; do
+		uic clean -v alix-rescue/${alixdir}
+	done
+}
+
+function alix_create {
+	for alixdir in $ALIX_DIRS; do
+		uic create -v alix-rescue/${alixdir}
+	done
+}
+
+function alix_build {
+	for alixdir in $ALIX_DIRS; do
+		uic build -v alix-rescue/${alixdir}
+	done
+}
+
+function alix_pack {
+	test_alix
+	for alixdir in $ALIX_DIRS; do
+		uic pack -o . -v alix-rescue/$alixdir
+		source alix-rescue/$alixdir/uictpl.conf
+		case "$UIC_RELEASE" in
+		"squeeze"|"wheezy")
+			FLAV="debian"
+			;;
+		*)
+			FLAV="ubuntu"
+			;;
+		esac
+		tar czf alix-rescue-${FLAV}-${UIC_SRCVERSION}.tar.gz \
+			-C alix-rescue/doc readme.txt relnotes.txt \
+			-C ../$alixdir/build syslinux pxelinux.cfg \
+			-C ../output package-list.txt axrescue.vmlinuz axrescue.initrd axrescue.initrdn axrescue.squashfs
+		touch --reference alix-rescue/$alixdir/output/axrescue.squashfs alix-rescue-${FLAV}-${UIC_SRCVERSION}.tar.gz
+	done
+}
+
+function alix_bootbank {
+	test_alix
+
+	for alixdir in $ALIX_DIRS; do
+		source alix-rescue/$alixdir/uictpl.conf
+		case "$UIC_RELEASE" in
+		"squeeze"|"wheezy")
+			FLAV="debian"
+			;;
+		*)
+			FLAV="ubuntu"
+			;;
+		esac
+
+		RAWFILE=alix-bootbank-${FLAV}-${UIC_SRCVERSION}.img
+		echo "Creating disc image file $RAWFILE"
+		dd if=/dev/zero of=$RAWFILE bs=1M count=520 > /dev/null 2> /dev/null
+		echo "  Mapping $RAWFILE as /dev/loop7"
+		losetup /dev/loop7 $RAWFILE
+		echo "  Writing master boot record"
+		dd if=/usr/lib/syslinux/mbr.bin of=/dev/loop7 > /dev/null 2> /dev/null
+		echo "  Partitioning"
+		sfdisk --no-reread /dev/loop7 < alix-bootbank/bootbank.ptab
+		sleep 1
+		losetup -d /dev/loop7
+
+		PART_START=$(cat alix-bootbank/bootbank.ptab | awk 'NR == 4 {print $4$6}' | cut -d, -f 1)
+		PART_END=$(cat alix-bootbank/bootbank.ptab | awk 'NR == 4 {print $4$6}' | cut -d, -f 2)
+
+		echo "  Mapping root partition range ${PART_START}-${PART_END} to /dev/loop7"
+		losetup /dev/loop7 --offset $((512 * $PART_START)) --sizelimit $((512 * $PART_END)) $RAWFILE
+		echo "  Creating filesystem"
+		mke2fs -L bootbank /dev/loop7
+		echo "  Mounting bootbank"
+		mkdir -p tmpbb
+		mount /dev/loop7 tmpbb
+		echo "  Populating bootbank"
+		mkdir -p tmpbb/syslinux
+		mkdir -p tmpbb/bank1
+		mkdir -p tmpbb/bank2
+		extlinux --install tmpbb/syslinux
+		cp alix-bootbank/extlinux.conf                      tmpbb/syslinux/
+		cp alix-bootbank/extlinux.default                   tmpbb/syslinux/
+		cp alix-bootbank/message-${UIC_RELEASE}.txt         tmpbb/syslinux/message.txt
+		cp alix-rescue/${alixdir}/output/axrescue.vmlinuz   tmpbb
+		cp alix-rescue/${alixdir}/output/axrescue.initrd    tmpbb
+		cp alix-rescue/${alixdir}/output/axrescue.squashfs  tmpbb
+		echo "  Unmounting and compressing"
+		sleep 1
+		umount tmpbb
+		rmdir tmpbb
+		losetup -d /dev/loop7
+		touch --reference alix-rescue/$alixdir/output/axrescue.squashfs $RAWFILE
+		bzip2 $RAWFILE
+		echo "  Done."
+	done
+}
+
+function alix_upload {
+	for alixdir in $ALIX_DIRS; do
+		rsync -avc alix-rescue/${alixdir}/output/* 10.65.6.1:/mnt/data/tftproot/yeaboot/${alixdir}/
+	done
+}
+
+case "$1" in
+clean)
+	alix_clean
+	;;
+create)
+	alix_create
+	;;
+build)
+	alix_build
+	;;
+pack)
+	alix_pack
+	;;
+bootbank)
+	alix_bootbank
+	;;
+upload)
+	alix_upload
+	;;
+all)
+	alix_clean
+	alix_create
+	alix_build
+	alix_pack
+	;;
+*)
+	echo "Usage: make_alix {clean|pack|create|build|bootbank|upload|all}"
+        exit 1
+        ;;
+esac
+
+exit 0

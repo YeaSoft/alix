@@ -1,5 +1,5 @@
 ==============================================================================
-Alix Rescue and PE System - Version 11
+Alix Rescue and PE System - Version 12
 ==============================================================================
 
      alix-rescue is a minimal standalone debian system intended as rescue,

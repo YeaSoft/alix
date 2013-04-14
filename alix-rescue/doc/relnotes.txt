@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - Alix Rescue and PE System - Version 11              2013-04-07
+Release Notes - Alix Rescue and PE System - Version 12              2013-04-14
 ==============================================================================
 
 * Release Scope
@@ -17,6 +17,7 @@ edition of alix-rescue for Debian 7 (wheezy).
 What's New
 ----------
  * Support for Debian Wheezy 7.0.0
+ * Fixed missed modules iso8859-1 and cp437 for booting from vfat partitions
  * UIC updated to version 0.15
  * Binaries updated as of 2013-04-07
 
@@ -87,6 +88,12 @@ None
 
 Release History
 ---------------
+
+Version 11 released on 2013-04-07
+
+ * Support for Debian Wheezy 7.0.0
+ * UIC updated to version 0.15
+ * Binaries updated as of 2013-04-07
 
 Version 10 released on 2012-05-23
 
