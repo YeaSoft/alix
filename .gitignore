@@ -1,0 +1,16 @@
+# local environment stuff
+/alix-rescue/alix-rescue-????/custom.conf
+
+# build intermediates
+/alix-rescue/alix-rescue-????/uictpl.md5
+/alix-rescue/alix-rescue-????/chroot/
+/alix-rescue/alix-rescue-????/output/
+/alix-templates/*/uictpl.md5
+/alix-templates/*.md5
+/alix-templates/*.bz2
+
+# build deliverables
+/alix-rescue-*.md5
+/alix-rescue-*.tar.bz2
+/alix-rescue-*.tar.gz
+/alix-bootbank-*.img.bz2
