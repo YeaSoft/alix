@@ -7,8 +7,8 @@
 # This part is executed at the END of the "nfs" root mount
 # operation
 #
-# Version: 20120510
-# Compatibility: squeeze(i386,amd64)
+# Version: 20130314
+# Compatibility: wheezy(i386,amd64) squeeze(i386,amd64)
 
 DHCPD_DEFAULT="/etc/default/isc-dhcp-server"
 

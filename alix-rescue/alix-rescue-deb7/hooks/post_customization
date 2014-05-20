@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
 # uic hook:	post_customization
 # called by:	uic_create, uic_build, uic_upgrade
@@ -9,12 +9,15 @@
 # (file copies and deletions) to the installation environment in $TARGET
 
 # fix broken file attributes (git does not preserve all file attributes)
-chmod 600 ${TARGET}/files/etc/ssh/ssh_host_?sa_key
-chmod 600 ${TARGET}/chroot/etc/ssh/ssh_host_?sa_key
+chmod 600 ${TARGET}/files/etc/ssh/ssh_host_*_key
+chmod 600 ${TARGET}/chroot/etc/ssh/ssh_host_*_key
 
-# copy the configuration file to the destination file system but remove the array
-# definitions since they are not compatible with /bin/sh
-sed -e "s/^UIC_TARGET.*/# DELETEME/g" <  "${TARGET}/uictpl.conf" | grep -v "^# DELETEME" > "${TARGET}/chroot/etc/uictpl.conf"
+# copy the configuration file to the destination file system but remove everything
+# not compatible with the target (that may be /bin/sh)
+sed	-e "/^.*uic_require.*$/d" \
+	-e "/^[[:space:]]*UIC_TARGET.*$/d" \
+	-e "/^[[:space:]]*UIC_ROOTPASSWORD.*$/d" \
+	"${TARGET}/uictpl.conf" > "${TARGET}/chroot/etc/uictpl.conf"
 
 # add some more information
 echo "UIC_CREATION_TIMESTAMP=\"$(date +'%Y-%m-%d %H:%M %z')\"" >> "${TARGET}/chroot/etc/uictpl.conf"
