@@ -7,8 +7,8 @@
 # This part is executed at the END of the "nfs" root mount
 # operation
 #
-# Version: 20120510
-# Compatibility: squeeze(i386,amd64)
+# Version: 20130314
+# Compatibility: wheezy(i386,amd64) squeeze(i386,amd64)
 
 DHCPD_DEFAULT="/etc/default/isc-dhcp-server"
 
@@ -191,7 +191,7 @@ else
 fi
 
 # disable autostart of ethernet adaptors
-sed -e "s/auto eth/# auto eth/g" < ${rootmnt}/etc/network/interfaces > /interfaces
+sed -e "s/auto eth/# auto eth/g" -e "s/allow-hotplug eth/# allow-hotplug eth/g" < ${rootmnt}/etc/network/interfaces > /interfaces
 mv /interfaces ${rootmnt}/etc/network/interfaces
 # disable autostart of dhcp server
 if [ -f ${rootmnt}${DHCPD_DEFAULT} ]; then
