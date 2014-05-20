@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - Alix Rescue and PE System - Version 12              2013-04-14
+Release Notes - Alix Rescue and PE System - Version 13              2013-11-19
 ==============================================================================
 
 * Release Scope
@@ -10,16 +10,15 @@ Release Notes - Alix Rescue and PE System - Version 12              2013-04-14
 
 Release Scope
 -------------
-This release features the updated version of UIC and includes the first
-edition of alix-rescue for Debian 7 (wheezy).
+This release features updated binaries for all versions and includes some
+undelete tools for ext filesystems. Since the support of Ubuntu hardy has been
+discontinued, the release if avaible only for Debian 6 and 7 and Ubuntu 10.04
 
 
 What's New
 ----------
- * Support for Debian Wheezy 7.0.0
- * Fixed missed modules iso8859-1 and cp437 for booting from vfat partitions
- * UIC updated to version 0.15
- * Binaries updated as of 2013-04-07
+ * Binaries updated as of 2013-11-19
+ * Added ext undelete tools
 
 
 Included Software
@@ -65,11 +64,11 @@ minute after completion of the boot process based on the selected alix-rescue
 
 Version                 | Local  | Net    
 ========================+========+========
-Debian 7.00-x86         |  69.5M |  59.9M
+Debian 7.2-x86          |  71.7M |  60.5M
 ------------------------+--------+--------
-Debian 6.07-x86         |  54.0M |  52.5M
+Debian 6.07-x86         |  54.0M |  52.8M
 ------------------------+--------+--------
-Ubuntu 10.04-x86        |  65.6M |  62.6M
+Ubuntu 10.04-x86        |  65.6M |  65.2M
 ------------------------+--------+--------
 Ubuntu 8.04-x86         |  57.2M |  46.7M 
 ------------------------+--------+--------
@@ -88,6 +87,10 @@ None
 
 Release History
 ---------------
+
+Version 12 released on 2013-04-07
+
+ * Fixed missed modules iso8859-1 and cp437 for booting from vfat partitions
 
 Version 11 released on 2013-04-07
 
