@@ -1,0 +1,75 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:		watchdog-led
+# Required-Start:
+# Required-Stop:
+# Default-Start:	1 2 3 4 5
+# Default-Stop:		0 6
+# Short-Description:	Provides LED signals based on runlevel
+### END INIT INFO
+
+set -e
+
+# load user customized configuration data
+[ -f /etc/default/alix-leds ] && . /etc/default/alix-leds
+
+. /lib/lsb/init-functions
+
+if [ "${ALIXLED1}" = "watchdog" ]; then
+	LEDNUM=1
+elif [ "${ALIXLED2}" = "watchdog" ]; then
+	LEDNUM=2
+elif [ "${ALIXLED3}" = "watchdog" ]; then
+	LEDNUM=3
+else
+	# nothing to do
+	exit 0
+fi
+
+if [ ! -d /sys/class/leds/alix\:${LEDNUM} ]; then
+	logger -p user.err -t watchdog-led "Alix LED Kernel Module not loaded. Cannot signal runlevel with LED pulse"
+	exit 0
+fi
+
+if [ "$RUNLEVEL" = "" ]; then
+	RUNLEVEL=$(runlevel | cut -d" " -f 2)
+fi
+if [ "$PREVLEVEL" = "" ]; then
+	PREVLEVEL=$(runlevel | cut -d" " -f 1)
+fi
+
+case "$1" in
+	start)
+		case "${RUNLEVEL}" in
+		1|S)
+			echo timer > /sys/class/leds/alix\:${LEDNUM}/trigger
+			echo 500   > /sys/class/leds/alix\:${LEDNUM}/delay_on
+			echo 500   > /sys/class/leds/alix\:${LEDNUM}/delay_off
+			;;
+		2|3|4|5)
+			echo heartbeat > /sys/class/leds/alix\:${LEDNUM}/trigger
+			;;
+		6)
+			echo timer > /sys/class/leds/alix\:${LEDNUM}/trigger
+			echo 100   > /sys/class/leds/alix\:${LEDNUM}/delay_on
+			echo 100   > /sys/class/leds/alix\:${LEDNUM}/delay_off
+			;;
+		*)
+			echo timer > /sys/class/leds/alix\:${LEDNUM}/trigger
+			echo 100   > /sys/class/leds/alix\:${LEDNUM}/delay_on
+			echo 300   > /sys/class/leds/alix\:${LEDNUM}/delay_off
+			;;
+		esac
+		;;
+	stop)
+		echo none > /sys/class/leds/alix\:${LEDNUM}/trigger
+		echo 0     > /sys/class/leds/alix\:${LEDNUM}/brightness
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
+
+exit 0

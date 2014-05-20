@@ -7,8 +7,7 @@
 #natsemi
 #lm90
 #scx200_acb base=0x810,0x820
-leds-alix2
+leds-alix
 ledtrig-default-on
 ledtrig-heartbeat
-ledtrig-gpio
 ledtrig-timer

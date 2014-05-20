@@ -1,0 +1,8 @@
+# specify function of led 1
+ALIXLED1=watchdog
+
+# specify function of led 2
+ALIXLED2=
+
+# specify function of led 3
+ALIXLED3=

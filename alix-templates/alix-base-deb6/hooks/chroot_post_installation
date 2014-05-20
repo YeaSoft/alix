@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2013 YeaSoft Int'l - Leo Moll
 #
 # uic chroot hook:      chroot_post_installation
 # called by:            uic_create, uic_upgrade
@@ -13,6 +13,9 @@
 # make sure all installed services that may be autostarted are stopped
 service cron stop	2> /dev/null > /dev/null
 service portmap stop	2> /dev/null > /dev/null
+
+# install the led watchdog
+update-rc.d watchdog-led defaults	2> /dev/null > /dev/null
 
 # make sure we do not exit with an error level
 [ 1 = 1 ]

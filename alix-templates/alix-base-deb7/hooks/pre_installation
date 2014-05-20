@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# (c) 2013 YeaSoft Int'l - Leo Moll
+# (c) 2013-2014 YeaSoft Int'l - Leo Moll
 #
 # uic hook:	pre_installation
 # called by:	uic_create, uic-upgrade
@@ -8,6 +8,12 @@
 # This hook will be called by uic_create before making any software
 # installation and configuration steps in the installation environment
 # in $TARGET
+
+
+# if the bootbank partition is already mounted in read only mode in the host,
+# we must remount it in read write mode because otherwise in the chrooted
+# environment it will be mounted from scratch as read write, and this would fail,
+# if the filesystem is already internally (kernel) mounted as read only
 
 
 BOOTBANK_LABEL=bootbank
@@ -33,11 +39,11 @@ if [ -e ${BOOTBANK_LDEVICE} ]; then
 	fi
 
 	# test if the partition is mounted with the physical device name
-	if grep "^${BOOTBANK_LDEVICE}[[:space:]]" /proc/mounts > /dev/null 2> /dev/null; then
+	if grep "^${BOOTBANK_PDEVICE}[[:space:]]" /proc/mounts > /dev/null 2> /dev/null; then
 		# determine the mount point
-		BOOTBANK_MOUNT=$(grep "^${BOOTBANK_LDEVICE}[[:space:]]" /proc/mounts | awk '{print $2}')
+		BOOTBANK_MOUNT=$(grep "^${BOOTBANK_PDEVICE}[[:space:]]" /proc/mounts | awk '{print $2}')
 		# check if the partition is mounted read only
-		if grep "^${BOOTBANK_LDEVICE}[[:space:]]" /proc/mounts  | awk '{print $4}' | grep "ro," > /dev/null 2> /dev/null; then
+		if grep "^${BOOTBANK_PDEVICE}[[:space:]]" /proc/mounts  | awk '{print $4}' | grep "ro," > /dev/null 2> /dev/null; then
 			domakerw=1
 		fi
 	fi

@@ -1,0 +1,46 @@
+#!/bin/bash
+
+pushd /usr/src
+
+if dpkg --get-selections | grep install | grep build-essential > /dev/null; then
+	BE_INSTALLED=1
+else
+	apt-get -y install build-essential
+	BE_INSTALLED=0
+fi
+if dpkg --get-selections | grep install | grep leds-alix-source > /dev/null; then
+	LA_INSTALLED=1
+else
+	apt-get -y install leds-alix-source
+	LA_INSTALLED=0
+fi
+if dpkg --get-selections | grep install | grep linux-headers-$(uname -r) > /dev/null; then
+	LH_INSTALLED=1
+else
+	apt-get -y install linux-headers-$(uname -r)
+	LH_INSTALLED=0
+fi
+
+tar -xvjf leds-alix.tar.bz2
+cd modules/leds-alix/
+sed -e "s/depmod -ae/depmod -E \/boot\/System.map-$(uname -r) -ae/" < Makefile > Makefile.new
+mv Makefile.new Makefile
+make
+make install
+cd /usr/src
+rm -rf /usr/src/modules
+
+
+if [ $LH_INSTALLED -eq 0 ]; then
+	apt-get --yes --purge remove linux-headers-$(uname -r)
+fi
+if [ $LA_INSTALLED -eq 0 ]; then
+	apt-get --yes --purge remove leds-alix-source
+fi
+if [ $BE_INSTALLED -eq 0 ]; then
+	apt-get --yes --purge remove build-essential
+fi
+
+apt-get --yes --purge autoremove
+apt-get clean
+popd
