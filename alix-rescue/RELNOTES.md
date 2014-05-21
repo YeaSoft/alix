@@ -71,11 +71,6 @@ __alix-rescue__:
    - partimage
    - uic
 
-
- * __Installation and deployment tools__
-   - partimage
-   - uic
-
 A complete package list is included as `package-list.txt` in each distribution
 archive. When running, the user can install additional software into the live
 system by using the standard commands:
