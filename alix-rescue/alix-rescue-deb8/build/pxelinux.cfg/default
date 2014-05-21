@@ -1,0 +1,8 @@
+SERIAL		0 38400 0
+CONSOLE		0
+
+# YOU HAVE TO ADAPT ALL PATHS AND
+# IP ADDRESSES TO YOUR ENVIRONENT
+
+DEFAULT	alix-rescue-deb7/axrescue.vmlinuz
+APPEND	initrd=alix-rescue-deb7/axrescue.initrdn rootdelay=2 root=/dev/nfs nfsroot=169.254.19.65:/mnt/data/tftproot ip=dhcp loop=/yeaboot/alix-rescue-deb7/axrescue.squashfs branch=/dev/ram console=ttyS0,38400n8

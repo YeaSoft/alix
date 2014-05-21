@@ -1,0 +1,166 @@
+#!/bin/sh
+#
+# (c) 2014 YeaSoft Int'l - Leo Moll
+#
+# This initramfs script implements support for root filesystem
+# autodetection without casper.
+# This part is executed at the BEGIN of the "local" root mount
+# operation
+#
+# Version: 20140516
+# Compatibility: jessie(i386,amd64) trusty(i386,amd64)
+
+PREREQ=""
+prereqs()
+{
+        echo "$PREREQ"
+}
+
+# get pre-requisites
+case $1 in
+prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. ./scripts/functions
+
+tried=/tmp/tried
+
+is_loop_path() {
+	if [ -f "$1/${LOOP#/}" ]; then
+		return 0
+	fi
+	return 1
+}
+
+
+is_nice_device() {
+	sysfs_path="${1#/sys}"
+
+	if udevadm info --query=all --path="${sysfs_path}" | egrep -q "DEVTYPE=disk"; then
+		return 0
+	elif echo "${sysfs_path}" | grep -q '^/block/vd[a-z]$'; then
+		return 0
+	elif echo "${sysfs_path}" | grep -q "^/block/dm-"; then
+		return 0
+	elif echo "${sysfs_path}" | grep -q "^/block/mtdblock"; then
+		return 0
+	fi
+	return 1
+}
+
+sys2dev() {
+	sysdev=${1#/sys}
+	echo "/dev/$(/sbin/udevadm info -q name -p ${sysdev} 2>/dev/null|| echo ${sysdev##*/})"
+}
+
+subdevices() {
+	sysblock=$1
+	r=""
+	for dev in "${sysblock}" "${sysblock}"/*; do
+		if [ -e "${dev}/dev" ]; then
+			r="${r} ${dev}"
+		fi
+	done
+	echo ${r}
+}
+
+is_supported_fs() {
+	fstype="${1}"
+	case ${fstype} in
+		vfat|iso9660|udf|ext2|ext3|ext4)
+			return 0
+			;;
+	esac
+	return 1
+}
+
+get_fstype() {
+	local FSTYPE
+	local FSSIZE
+	eval $(fstype < $1)
+	if [ "$FSTYPE" != "unknown" ]; then
+		echo $FSTYPE
+		return 0
+	fi
+	/sbin/blkid -s TYPE -o value $1 2>/dev/null
+}
+
+check_dev() {
+	sysdev="${1}"
+	devname="${2}"
+
+	if [ -z "${devname}" ]; then
+		devname=$(sys2dev "${sysdev}")
+	fi
+
+	[ -e "$devname" ] || continue
+
+	# create temporary path for testmount
+	mkdir -p /testmount
+
+	fstype=$(get_fstype "${devname}")
+	if is_supported_fs ${fstype}; then
+		devuid=$(blkid -o value -s UUID "$devname")
+		[ -n "$devuid" ] && grep -qs "\<$devuid\>" $tried && continue
+		mount -t ${fstype} -o ro,noatime "${devname}" /testmount || continue
+		[ -n "$devuid" ] && echo "$devuid" >> $tried
+		if is_loop_path /testmount; then
+			umount /testmount
+			rmdir /testmount
+			echo ${devname}
+			return 0
+		else
+			umount /testmount
+		fi
+	fi
+	rmdir /testmount
+	return 1
+}
+
+find_livefs() {
+	timeout="${1}"
+
+	# don't start autodetection before timeout has expired
+	if [ -n "${LIVEMEDIA_TIMEOUT}" ]; then
+		if [ "${timeout}" -lt "${LIVEMEDIA_TIMEOUT}" ]; then
+			return 1
+		fi
+	fi
+	# do the scan of block devices
+	for sysblock in $(echo /sys/block/* | tr ' ' '\n' | egrep -v "/(loop|ram|fd)"); do
+		devname=$(sys2dev "${sysblock}")
+		[ -e "$devname" ] || continue
+		fstype=$(get_fstype "${devname}")
+		if /lib/udev/cdrom_id ${devname} > /dev/null; then
+			if check_dev "null" "${devname}" ; then
+				return 0
+			fi
+		elif is_nice_device "${sysblock}" ; then
+			for dev in $(subdevices "${sysblock}"); do
+				if check_dev "${dev}" ; then
+					return 0
+				fi
+			done
+		fi
+	done
+	return 1
+}
+
+if [ "${ROOT}" = "/dev/detect" ]; then
+	[ "$quiet" != "y" ] && log_begin_msg "Detecting root device for loop mount..."
+
+	trycount=0
+	while [ "$trycount" -lt 60 ]; do
+		new_root=$(find_livefs $trycount)
+		if [ "${new_root}" ]; then
+			break
+		fi
+		sleep 1
+		trycount="$(($trycount + 1))"
+        done
+	echo "ROOT=\"${new_root}\"" >> /conf/param.conf
+	[ "$quiet" != "y" ] && log_end_msg
+fi

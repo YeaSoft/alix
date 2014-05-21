@@ -1,0 +1,37 @@
+# List of modules that you want to include in your initramfs.
+#
+# Syntax:  module_name [args ...]
+#
+# You must run update-initramfs(8) to effect this change.
+#
+# Examples:
+#
+# raid1
+# sd_mod
+
+# disk subsystem
+pata_amd
+pata_cs5536
+ata_generic
+libata
+scsi_mod
+sd_mod
+# usb
+ohci-hcd
+ehci-hcd
+uhci-hcd
+usbcore
+usbhid
+# host filesystems
+ext2
+ext3
+fat
+vfat
+nls_iso8859-1
+nls_cp437
+mbcache
+lockd
+# live booting filesystems
+loop
+squashfs
+aufs
