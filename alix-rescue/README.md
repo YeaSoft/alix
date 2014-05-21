@@ -19,10 +19,12 @@ boots either from a local volume or from PXE in order to have a robust and
 reliable fallback solution in case of failure of the main operating system as
 well as at installation time.
 
-__alix-rescue__ satifies these requirements. It is simple to deploy both on
+__alix-rescue__ satisfies these requirements. It is simple to deploy both on
 PXE and on a local CF-Card and comes with all needed features for installing
 a new system or troubleshooting the existing system.
 
+!!! WORK IN PROGRESS !!!
+========================
 
 Features
 --------
