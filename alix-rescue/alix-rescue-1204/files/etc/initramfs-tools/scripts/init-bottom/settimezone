@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# (c) 2014 YeaSoft Int'l - Leo Moll
+#
+# This initramfs script implements support for setting
+# the timezone from the kernel comandline.
+
+PREREQ=""
+prereqs()
+{
+        echo "$PREREQ"
+}
+
+# get pre-requisites
+case $1 in
+prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. ./scripts/functions
+
+TIMEZONE=
+
+log_begin_msg "Parsing overlay specific parameters..."
+# Parse command line options
+for x in $(cat /proc/cmdline); do
+        case $x in
+	timezone=*)
+		TIMEZONE=${x#timezone=}
+		;;
+	esac
+done
+log_end_msg
+
+if [ "${TIMEZONE}" != "" ]; then
+	AREA="${TIMEZONE%%/*}"
+	ZONE="${TIMEZONE#*/}"
+	if [ -n "${AREA}" -a -n "${ZONE}" ]; then
+		if [ -f "${rootmnt}/usr/share/zoneinfo/${AREA}/${ZONE}" ]; then
+			# Update the time zone
+			[ "$quiet" != "y" ] && log_begin_msg "Setting the timezone to ${TIMEZONE}..."
+			echo ${AREA}/${ZONE} > ${rootmnt}/etc/timezone
+			cp -f ${rootmnt}/usr/share/zoneinfo/$AREA/$ZONE ${rootmnt}/etc/localtime.dpkg-new && \
+			mv -f ${rootmnt}/etc/localtime.dpkg-new ${rootmnt}/etc/localtime
+			# which restorecon >/dev/null 2>&1 && restorecon /etc/localtime
+			[ "$quiet" != "y" ] && log_end_msg
+		else
+			# unsupported timezone specified
+			log_failure_msg "Requested timezone ${TIMEZONE} is not supported"
+		fi
+	else
+		# invalid timezone specified
+		log_failure_msg "Requested timezone ${TIMEZONE} is invalid"
+	fi
+fi

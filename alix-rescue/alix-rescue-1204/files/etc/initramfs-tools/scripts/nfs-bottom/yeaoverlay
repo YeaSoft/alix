@@ -1,0 +1,210 @@
+#!/bin/sh
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# This initramfs script implements support for loop and branch
+# filesystem in nfs rootfs environments.
+# This part is executed at the END of the "nfs" root mount
+# operation
+#
+# Version: 20120511
+# Compatibility: hardy(i386,amd64), lucid(i386,amd64), precise(i386,amd64)
+
+DHCPD_DEFAULT="/etc/default/dhcp3-server"
+
+PREREQ=""
+prereqs()
+{
+        echo "$PREREQ"
+}
+
+# get pre-requisites
+case $1 in
+prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. ./scripts/functions
+
+[ "$quiet" != "y" ] && log_begin_msg "Parsing overlay specific parameters..."
+# Parse command line options
+for x in $(cat /proc/cmdline); do
+        case $x in
+	branch=*)
+		BRANCH=${x#branch=}
+		case $BRANCH in
+		LABEL=*)
+			BRANCH="${BRANCH#LABEL=}"
+
+			# support / in LABEL= paths (escape to \x2f)
+			case "${BRANCH}" in
+			*[/]*)
+			if [ -x "$(command -v sed)" ]; then
+				ROOT="$(echo ${BRANCH} | sed 's,/,\\x2f,g')"
+			else
+				if [ "${BRANCH}" != "${BRANCH#/}" ]; then
+					BRANCH="\x2f${BRANCH#/}"
+				fi
+				if [ "${BRANCH}" != "${BRANCH%/}" ]; then
+					BRANCH="${BRANCH%/}\x2f"
+				fi
+				IFS='/'
+				newbranch=
+				for s in $BRANCH; do
+					if [ -z "${newbranch}" ]; then
+						newbranch="${s}"
+					else
+						newbranch="${newbranch}\\x2f${s}"
+					fi
+				done
+				unset IFS
+				BRANCH="${newbranch}"
+			fi
+			esac
+			BRANCH="/dev/disk/by-label/${BRANCH}"
+			;;
+		UUID=*)
+			BRANCH="/dev/disk/by-uuid/${BRANCH#UUID=}"
+			;;
+		/dev/ram)
+			BRANCHFSTYPE="tmpfs"
+			BRANCH="tmpfs"
+			;;
+		esac
+		;;
+	branchflags=*)
+		BRANCHFLAGS="-o ${x#branchflags=}"
+		;;
+	branchfstype=*)
+		BRANCHFSTYPE="${x#branchfstype=}"
+		;;
+	branchropath=*)
+		BRANCHROPATH="${x#branchropath=}"
+		;;
+	branchrwpath=*)
+		BRANCHRWPATH="${x#branchrwpath=}"
+		;;
+	esac
+done
+[ "$quiet" != "y" ] && log_end_msg
+
+[ "$quiet" != "y" ] && log_begin_msg "Loading filesystem drivers..."
+modprobe loop
+modprobe squashfs
+modprobe aufs
+[ "$quiet" != "y" ] && log_end_msg
+
+if [ "$LOOP" ]; then
+	[ "$quiet" != "y" ] && log_begin_msg "Processing loop mount..."
+
+	mkdir -p /host
+	mount -o move ${rootmnt} /host
+
+	while [ ! -e "/host/${LOOP#/}" ]; do
+		panic "ALERT!  /host/${LOOP#/} does not exist.  Dropping to a shell!"
+	done
+
+	# Get the loop filesystem type if not set
+	if [ -z "${LOOPFSTYPE}" ]; then
+		eval $(fstype < "/host/${LOOP#/}")
+	else
+		FSTYPE="${LOOPFSTYPE}"
+	fi
+	if [ "$FSTYPE" = "unknown" ] && [ -x /sbin/blkid ]; then
+		FSTYPE=$(/sbin/blkid -s TYPE -o value "/host/${LOOP#/}")
+		[ -z "$FSTYPE" ] && FSTYPE="unknown"
+	fi
+
+	if [ ${readonly} = y ]; then
+		roflag=-r
+	else
+		roflag=-w
+	fi
+
+	# FIXME This has no error checking
+	modprobe loop
+	modprobe ${FSTYPE}
+
+	# FIXME This has no error checking
+	mount ${roflag} -o loop -t ${FSTYPE} ${LOOPFLAGS} "/host/${LOOP#/}" ${rootmnt}
+
+	[ "$quiet" != "y" ] && log_end_msg
+fi
+
+if [ "$BRANCH" ]; then
+	# Get the branch filesystem type if not set
+	if [ -z "${BRANCHFSTYPE}" ]; then
+		[ -n "${BFSTYPE}" ] || BFSTYPE=$(/sbin/blkid -s TYPE -o value "${BRANCH}")
+		BRANCHFSTYPE="${BFSTYPE}"
+	else
+		BFSTYPE="${BRANCHFSTYPE}"
+	fi
+
+	[ "$quiet" != "y" ] && log_begin_msg "Creating filesystem prerequisites..."
+	mkdir /union
+	mkdir /union/ro
+	mkdir /union/rw
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Mounting read write branch filesystem..."
+	[ -n "${BFSTYPE}" -a "${BFSTYPE}" != "tmpfs" ] && modprobe ${BFSTYPE}
+	mount ${BFSTYPE:+-t ${BFSTYPE} }${BRANCHFLAGS} ${BRANCH} /union/rw
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Moving read only root filesystem in place..."
+	mount -o move ${rootmnt} /union/ro
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Loading filesystem drivers..."
+	modprobe aufs
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Merging filesystem..."
+	mount -t aufs -o br:/union/rw${BRANCHRWPATH}:/union/ro${BRANCHROPATH} none ${rootmnt}
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Create working shadows..."
+	mkdir -p ${rootmnt}/root/.host
+	mkdir -p ${rootmnt}/root/.union/ro
+	mkdir -p ${rootmnt}/root/.union/rw
+	mount -o move /host     ${rootmnt}/root/.host
+	mount -o move /union/ro ${rootmnt}/root/.union/ro
+	mount -o move /union/rw ${rootmnt}/root/.union/rw
+	# register physical filesystems in fstab
+	echo >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.host[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.union/ro[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.union/ro\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.union/rw[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.union/rw\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' | sed -e "s/$(echo -n "${rootmnt}/" | sed -e 's/\//\\\//g')/\//g" >> ${rootmnt}/etc/fstab
+	[ "$quiet" != "y" ] && log_end_msg
+else
+	[ "$quiet" != "y" ] && log_begin_msg "Create working shadows..."
+	mkdir -p ${rootmnt}/root/.host
+	mount -o move /host     ${rootmnt}/root/.host
+	# register physical filesystems in fstab
+	echo >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}/root/.host[[:space:]]" /proc/mounts | awk '{print $1"\t\t\t/root/.host\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' >> ${rootmnt}/etc/fstab
+	grep "[[:space:]]${rootmnt}[[:space:]]" /proc/mounts | grep -v rootfs | awk '{print $1"\t\t\t/\t"$3"\tnoauto,"$4"\t"$5"\t"$6}' | sed -e "s/$(echo -n "${rootmnt}/" | sed -e 's/\//\\\//g')/\//g" >> ${rootmnt}/etc/fstab
+	[ "$quiet" != "y" ] && log_end_msg
+fi
+
+# disable autostart of ethernet adaptors
+sed -e "s/auto eth/# auto eth/g" < ${rootmnt}/etc/network/interfaces > /interfaces
+mv /interfaces ${rootmnt}/etc/network/interfaces
+# disable autostart of dhcp server
+if [ -f ${rootmnt}${DHCPD_DEFAULT} ]; then
+	echo "#" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "# AUTOMATICALLY ADDED BY NETBOOT" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "echo \"isc-dhcp-server disbled\"" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "exit 0" >> ${rootmnt}${DHCPD_DEFAULT}
+	echo "# END AUTOMATIC DISABLING" >> ${rootmnt}${DHCPD_DEFAULT}
+fi
+
+# do not leave garbage around
+unset BRANCH
+unset BRANCHFLAGS
+unset BRANCHFSTYPE
+unset BRANCHROPATH
+unset BRANCHRWPATH

@@ -1,0 +1,142 @@
+#!/bin/sh
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# This initramfs script implements support for configuring
+# the dhcp server interface from the kernel comandline.
+
+PREREQ=""
+prereqs()
+{
+        echo "$PREREQ"
+}
+
+# get pre-requisites
+case $1 in
+prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+
+. ./scripts/functions
+
+DHCPD_DEFAULT="/etc/default/dhcp3-server"
+DHCPD_CONF="/etc/dhcp3/dhcpd.conf"
+
+DHCPDIF=eth0
+DHCPDIFIP=
+DHCPDIFMASK=
+DHCPDIFSWAP=
+DHCPDIFENABLE=
+
+valid_dotted_quad() {
+	ERROR=0
+	oldIFS=$IFS
+	IFS=.
+	set -f
+	set -- $1
+	if [ $# -eq 4 ]; then
+		ELEMENT=0
+		for seg; do
+			ELEMENT=$(( ELEMENT + 1 ))
+			case $seg in
+			""|*[!0-9]*) ERROR=1;break ;; ## Segment empty or non-numeric char
+			*) [ $seg -gt 255 ] && ERROR=2 ;;
+			esac
+			case $ELEMENT in
+			1) DHCPDIFNET=$seg;;
+			2) DHCPDIFNET=${DHCPDIFNET}.${seg};;
+			3) DHCPDIFNET=${DHCPDIFNET}.${seg};;
+			esac
+		done
+	else
+		ERROR=3 ## Not 4 segments
+	fi
+	IFS=$oldIFS
+	set +f
+	return $ERROR
+}
+
+[ "$quiet" != "y" ] && log_begin_msg "Parsing DHCPD overlay specific parameters..."
+# Parse command line options
+for x in $(cat /proc/cmdline); do
+        case $x in
+	dhcpdif-mask=*)
+		DHCPDIFMASK=${x#dhcpdif-mask=}
+		;;
+	dhcpdif-ip=*)
+		DHCPDIFIP=${x#dhcpdif-ip=}
+		;;
+	dhcpdif-en*)
+		DHCPDIFENABLE="YES"
+		;;
+	dhcpdif-sw*)
+		DHCPDIFSWAP="YES"
+		;;
+	esac
+done
+[ "$quiet" != "y" ] && log_end_msg
+
+if [ "${DHCPDIFSWAP}" != "" ]; then
+	# swap eth0 with eth2
+	[ "$quiet" != "y" ] && log_begin_msg "Swapping eth0 with eth2"
+	cat ${rootmnt}/etc/network/interfaces | sed -e "s/eth0/eth12345/g" | sed -e "s/eth2/eth0/g" | sed -e "s/eth12345/eth2/g" > /tempfile
+	mv /tempfile ${rootmnt}/etc/network/interfaces
+	DHCPDIF=eth2
+	[ "$quiet" != "y" ] && log_end_msg
+fi
+
+if [ "${DHCPDIFIP}" = "dhcp" ]; then
+	# this is default now - so do nothing
+	[ "$quiet" != "y" ] && log_begin_msg "Leaving primary interface in dhcp mode..."
+	# [ "$quiet" != "y" ] && log_begin_msg "Setting primary interface to dhcp..."
+	# sed -e "s/iface eth0/iface eth0 inet dhcp\\n\\niface eth10/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
+	# mv /tempfile ${rootmnt}/etc/network/interfaces
+	[ "$quiet" != "y" ] && log_end_msg
+else
+	if [ "${DHCPDIFMASK}" != "" ]; then
+		DHCPDIFNET=
+		if valid_dotted_quad "${DHCPDIFMASK}"; then
+			[ "$quiet" != "y" ] && log_begin_msg "Setting netmask of primary DHCP interface to ${DHCPDIFMASK}..."
+			sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}/etc/network/interfaces > /tempfile
+			mv /tempfile ${rootmnt}/etc/network/interfaces
+			sed -e "s/255.255.255.000/${DHCPDIFMASK}/g" < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
+			[ "$quiet" != "y" ] && log_end_msg
+		fi
+	fi
+
+	if [ "${DHCPDIFIP}" != "" ]; then
+		DHCPDIFNET=
+		if valid_dotted_quad "${DHCPDIFIP}"; then
+			[ "$quiet" != "y" ] && log_begin_msg "Setting ip address of primary DHCP interface to ${DHCPDIFIP}..."
+			sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}/etc/network/interfaces > /tempfile
+			mv /tempfile ${rootmnt}/etc/network/interfaces
+			sed -e "s/192.168.1.1/${DHCPDIFIP}/g"  < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
+			sed -e "s/192.168.1./${DHCPDIFNET}./g" < ${rootmnt}${DHCPD_CONF} > /tempfile
+			mv /tempfile ${rootmnt}${DHCPD_CONF}
+			[ "$quiet" != "y" ] && log_end_msg
+		elif [ "${DHCPDIFIP}" != "static" ]; then
+			# invalid option specified
+			DHCPDIFIP=
+		fi
+	fi
+
+	if [ "${DHCPDIFIP}" != "" ]; then
+		# set primary interface to static mode
+		sed	-e "s/iface ${DHCPDIF} inet dhcp/iface ${DHCPDIF} inet static/" \
+			-e "s/#ADDR/address/" \
+			-e "s/#MASK/netmask/" < ${rootmnt}/etc/network/interfaces > /tempfile
+		mv /tempfile ${rootmnt}/etc/network/interfaces
+	fi
+
+	if [ "${DHCPDIFENABLE}" != "" ]; then
+		[ "$quiet" != "y" ] && log_begin_msg "Enabling DHCP server on primary DHCP interface..."
+		sed -e "s/\"eth1\"/\"${DHCPDIF} eth1\"/g" < ${rootmnt}${DHCPD_DEFAULT} > /tempfile
+		mv /tempfile ${rootmnt}${DHCPD_DEFAULT}
+		[ "$quiet" != "y" ] && log_end_msg
+	fi
+
+fi
