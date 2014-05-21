@@ -32,7 +32,8 @@ What's New in Version 13 (2014-??-??)
    - e2undel (not included in alix-rescue-deb8)
  * New flavour based on Debian Jessie 8 Beta
  * New flavour based on Ubuntu Precise 12.04
-
+ * New command line switch `settimezone=<AREA>/<ZONE>` allows to configure the
+   time zone of the system
 
 Included Software
 -----------------
