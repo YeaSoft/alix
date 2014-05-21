@@ -366,10 +366,10 @@ Installation Creator. See the [project page][1] for further information.
 Copyright and Legal Stuff
 -------------------------
 
-NetPoldo is a derivative work based on Debian and Ubuntu Linux created by Leo
-Moll <leo.moll@yeasoft.com>
+__alix-rescue__ is a derivative work based on Debian and Ubuntu Linux created
+by Leo Moll
 
-Copyright: 2012-2014 Leo Moll <leo.moll@yeasoft.com>
+Copyright: 2012-2014 Leo Moll <<leo.moll@yeasoft.com>>
 
 > This package is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
