@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	post_build
+# called by:	uic_build
+#
+# This hook will be called by uic_build after performing the last build
+# step of the build procedure in the installation environment in $TARGET
+
+# make sure all output files have the right permissions. unfortunately
+# they seem to be a bit random depending on the distribution and
+# version. e.g.: the kernel is not readable by the tftp server in
+# ubuntu precise...
+
+for OUTFILE in ${TARGET:-.}/output/*; do
+	if [ -f "${OUTFILE}" ]; then
+		chmod 644 "${OUTFILE}"
+	fi
+done
