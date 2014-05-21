@@ -12,16 +12,16 @@ Alix Rescue and PE System
 Motivation
 ----------
 
-Since appliances based on [PC-Engines](http://pcengines.ch) Alix Boards are
-equipped only with a serial interface and boot only from the internal disc or
+Since appliances based on [PC-Engines Alix Boards](http://pcengines.ch) are
+only equipped with a serial interface and boot only from the internal disc or
 via PXE, it may be useful to have a live rescue operating system at hand that
 boots either from a local volume or from PXE in order to have a robust and
 reliable fallback solution in case of failure of the main operating system as
 well as at installation time.
 
-__alix-rescue__ satifies these requirements. It is simple to deploy on PXE as
-wellas on a local CF-Card and comes with all needed features for installing a
-new system or troubleshooting the existing system.
+__alix-rescue__ satifies these requirements. It is simple to deploy both on
+PXE and on a local CF-Card and comes with all needed features for installing
+a new system or troubleshooting the existing system.
 
 
 Features
@@ -30,7 +30,7 @@ Features
 The __alix-rescue__ system comes with the following preinstalled software
 packages:
 
- * Connectivity and Usability
+ * __Connectivity and Usability__
    - ssh client and server
    - isc dhcp server
    - dnsutils
@@ -41,11 +41,11 @@ packages:
    - nano
    - lsof
 
- * Additional File System
+ * __Additional File System__
    - nfs-common
    - ntfs-3g
 
- * File System and Volume Tools
+ * __File System and Volume Tools__
    - syslinux including extlinux binary
    - squashfs-tools
    - dosfstools
@@ -55,7 +55,7 @@ packages:
    - recover (not included in alix-rescue-deb8)
    - e2undel (not included in alix-rescue-deb8)
 
- * Installation and deployment tools
+ * __Installation and deployment tools__
    - partimage
    - uic
 
@@ -341,6 +341,24 @@ Unpack the ___alix-rescue___ files to the boot partition and then unmount:
 
 Now you can plug the CF-Card in your Alix board, power it on and enjoy the
 show!
+
+
+Related Links
+-------------
+
+   * Download location for prebuilt binaries:
+     http://www.yeasoft.com/downloads/alix/alix-rescue/
+   * Project home page:
+     http://www.yeasoft.com/site/projects:alix:alix-rescue
+   * GitHub Repository:
+     https://github.com/YeaSoft/alix
+
+__alix-rescue__ can be built from its templates using __UIC__, the Unified
+Installation Creator. See the [project page][1] for further information.
+ __UIC__ is also [hosted on GitHub][2].
+
+[1]: http://www.yeasoft.com/site/projects:uic
+[2]: https://github.com/YeaSoft/uic
 
 
 Copyright and Legal Stuff
