@@ -8,7 +8,7 @@
 # operation
 #
 # Version: 20120511
-# Compatibility: hardy,lucid(i386,amd64)
+# Compatibility: precise(i386,amd64), lucid(i386,amd64), hardy(i386,amd64)
 
 PREREQ=""
 prereqs()
@@ -93,6 +93,11 @@ modprobe loop
 modprobe squashfs
 modprobe aufs
 [ "$quiet" != "y" ] && log_end_msg
+
+if [ "$BOOT" = "internal" ]; then
+	mkdir -p /host
+	mount -o bind / /host
+fi
 
 if [ "$BRANCH" ]; then
 	# Get the branch filesystem type if not set

@@ -8,7 +8,7 @@
 # operation
 #
 # Version: 20120511
-# Compatibility: lucid(i386,amd64)
+# Compatibility: hardy(i386,amd64), lucid(i386,amd64), precise(i386,amd64)
 
 DHCPD_DEFAULT="/etc/default/dhcp3-server"
 

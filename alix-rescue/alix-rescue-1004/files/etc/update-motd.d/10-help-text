@@ -3,9 +3,9 @@
 . /etc/uictpl.conf
 
 echo
-echo "Welcome to YeaSoft Alix Ubuntu ${UIC_SRCVERSION} Rescue System!"
+echo "Welcome to YeaSoft's Alix Ubuntu ${UIC_SRCVERSION} Rescue System!"
 echo
 echo "Created from Ubuntu (${UIC_RELEASE}) on ${UIC_CREATION_TIMESTAMP} using"
-echo " - UIC (Ubuntu Installation Creator) ${UIC_CREATION_VERSION}"
+echo " - UIC (Unified Installation Creator) ${UIC_CREATION_VERSION}"
 echo " - ${UIC_SRCNAME} ${UIC_SRCVERSION} uic template"
 echo

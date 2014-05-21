@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# This configuration applies to the yeasoft boot systtem
+# This configuration applies to the yeasoft boot system
 
 export LOOP=${LOOP}
 export LOOPFLAGS=${LOOPFLAGS}
